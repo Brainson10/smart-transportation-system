@@ -1,0 +1,417 @@
+/* =========================
+   GLOBAL RESET
+   ========================= */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f4f6f8;
+  color: #111827;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 26px 32px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #ffffff;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.header p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+/* =========================
+   HEADER ACTION BUTTONS
+   ========================= */
+.header-actions {
+  display: flex;
+  gap: 14px;
+}
+
+/* Outline button */
+.btn-outline {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.5);
+  background: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+/* Run AI / Primary button */
+.run-ai-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+}
+
+.run-ai-btn:hover {
+  background: #2563eb;
+}
+
+/* =========================
+   STATS
+   ========================= */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.stat-card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  font-size: 15px;
+}
+
+.stat-card b {
+  font-size: 22px;
+}
+
+/* =========================
+   SECTIONS
+   ========================= */
+section {
+  padding: 24px;
+}
+
+h2 {
+  margin-bottom: 16px;
+}
+
+/* =========================
+   RISK CARDS
+   ========================= */
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+  gap: 20px;
+}
+
+.risk-card {
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 5px 14px rgba(0,0,0,0.08);
+}
+
+.risk-card.high {
+  border-left: 6px solid #ef4444;
+}
+
+.risk-card.medium {
+  border-left: 6px solid #f59e0b;
+}
+
+.risk-card.low {
+  border-left: 6px solid #22c55e;
+}
+
+.risk-level {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.confidence {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+/* =========================
+   INSIGHTS
+   ========================= */
+.insights ul {
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+/* =========================
+   CAMERA STATUS
+   ========================= */
+.camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+  gap: 14px;
+}
+
+.camera {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+.camera.online::before {
+  content: "● ";
+  color: #22c55e;
+}
+
+.camera.offline::before {
+  content: "● ";
+  color: #ef4444;
+}
+
+/* =========================
+   VEHICLE / CAMERA LIST CARDS
+   ========================= */
+.vehicles {
+  margin-top: 24px;
+}
+
+.vehicle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 16px 18px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+}
+
+.vehicle strong {
+  font-size: 16px;
+}
+
+.vehicle small {
+  color: #6b7280;
+}
+
+/* =========================
+   ACTION AREA
+   ========================= */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Status badge */
+.status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.blocked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status.online {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.offline {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* =========================
+   ACTION BUTTONS
+   ========================= */
+.action-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Toggle */
+.toggle-btn {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.toggle-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Delete */
+.delete-btn {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+}
+
+/* =========================
+   FORMS (ADD CAMERA / REGISTER)
+   ========================= */
+.form-box {
+  max-width: 420px;
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 5px 14px rgba(0,0,0,0.08);
+}
+
+.form-box label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.form-box input,
+.form-box select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+footer {
+  margin-top: 40px;
+  padding: 20px;
+  text-align: center;
+  background: #e5e7eb;
+  font-size: 14px;
+  color: #374151;
+}
+
+
+
+/* =========================
+   SECONDARY ACTION LINKS
+   (View details buttons)
+   ========================= */
+.link-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 14px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #2563eb;
+  background: #eef2ff;
+
+  border-radius: 8px;
+  text-decoration: none;
+
+  transition: all 0.2s ease;
+}
+
+.link-btn:hover {
+  background: #e0e7ff;
+  color: #1d4ed8;
+}
+
+
+/* =========================
+   VIEW DETAILS BUTTON (COMMON)
+   ========================= */
+.view-btn {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 18px;
+  background: #e0ebff;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.view-btn:hover {
+  background: #c7dbff;
+  color: #1d4ed8;
+}
+
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+/* Page wrapper */
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content grows */
+.content {
+    flex: 1;
+}
+
+/* Footer styling */
+.footer {
+    background: #e9ecef;
+    text-align: center;
+    padding: 15px;
+    font-size: 14px;
+    color: #333;
+}
+
+
+/* =========================
+   MOBILE
+   ========================= */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+

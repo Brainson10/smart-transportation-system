@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register Vehicle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- HEADER -->
+  <header class="hero-header">
+    <div class="header-content">
+      <h1>Register Vehicle</h1>
+      <p>Smart Transportation System – AI Safety Intelligence</p>
+
+      <a href="{{ url_for('admin_dashboard') }}" class="btn primary">
+        ← Back to Admin Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+    <div class="form-wrapper">
+      <div class="form-card">
+
+        <h2>Vehicle Registration Form</h2>
+        <p class="form-subtitle">
+          Add a new vehicle to the campus access system
+        </p>
+
+        <form method="POST">
+
+          <div class="form-group">
+            <label>Vehicle Number</label>
+            <input type="text" name="number" placeholder="MN01AB1234" required>
+          </div>
+
+          <div class="form-group">
+            <label>Owner Name</label>
+            <input type="text" name="owner" placeholder="Owner full name" required>
+          </div>
+
+          <div class="form-group">
+            <label>Vehicle Type</label>
+            <input type="text" name="type" placeholder="Car / Bike / Truck" required>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Register Vehicle</button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn link">Cancel</a>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    © 2026 Smart Transportation System | Academic Demo
+  </footer>
+
+</div>
+
+</body>
+</html>

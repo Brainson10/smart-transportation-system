@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gate System Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+<div class="page-container"> 
+<header class="top-header">
+  <h1>Gate System Portal</h1>
+  <p class="subtitle">Smart Transportation System – AI Safety Intelligence</p>
+</header>
+<!-- ===== OVERVIEW ===== -->
+<section class="section">
+    <h2>Gate Monitoring Overview</h2>
+    <p>
+        Upload a short campus entry video to simulate AI-based vehicle detection,
+        number plate recognition, and access decision at the campus gate.
+    </p>
+</section>
+
+<!-- ===== VIDEO UPLOAD ===== -->
+<!-- <section class="section light">
+    <h2>Vehicle Entry Video Analysis</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="video" accept="video/*" required>
+        <br><br>
+        <button type="submit">Analyze Vehicle</button>
+    </form>
+
+    {% if result %}
+        <div class="decision-box {{ result.status }}">
+            <h3>Access Decision: {{ result.decision }}</h3>
+            <p><strong>Vehicle Number:</strong> {{ result.vehicle }}</p>
+            <p><strong>Confidence:</strong> {{ result.confidence }}%</p>
+        </div>
+    {% endif %}
+</section>
+</div> -->
+
+<form method="POST" enctype="multipart/form-data">
+    <input type="file" name="video" required>
+    <button type="submit">Upload & Analyze</button>
+</form>
+
+{% if result %}
+<div class="result {{ result.decision|lower }}">
+    <h2>{{ result.decision }}</h2>
+    <p>Vehicle: {{ result.vehicle }}</p>
+</div>
+{% endif %}
+
+{% if video_path %}
+<video width="400" controls>
+    <source src="{{ video_path }}" type="video/mp4">
+</video>
+{% endif %}
+
+
+<!-- ===== FOOTER (SAME AS ADMIN) ===== -->
+<footer class="footer">
+        <div class="footer-top">
+            <a href="#">About this platform</a>
+            <a href="#">Contact & Support</a>
+            <a href="#">Terms & Conditions</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Cookie Settings</a>
+        </div>
+
+        <div class="footer-bottom">
+            © 2026 Smart Transportation System.  
+            All rights reserved. This platform is developed for academic
+            and research demonstration purposes.
+        </div>
+</footer>
+
+
+</body>
+</html>

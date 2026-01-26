@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Camera</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='add_camera.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+
+  <header class="hero-header">
+    <h1>Add New Camera</h1>
+    <p>Smart Transportation System – AI Safety Intelligence</p>
+    <a href="{{ url_for('admin_dashboard') }}">← Back to Admin Dashboard</a>
+  </header>
+
+  <main class="content">
+    <div class="form-card">
+      <h2>Add Camera</h2>
+      <p class="subtitle">Register a new surveillance camera</p>
+
+      <form method="post">
+
+        <div class="form-group">
+          <label>Camera Name</label>
+          <input type="text" name="name" placeholder="Camera Name" required>
+        </div>
+
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" name="location" placeholder="Location" required>
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            <option value="ONLINE">ONLINE</option>
+            <option value="OFFLINE">OFFLINE</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">Add Camera</button>
+          <a href="{{ url_for('manage_cameras') }}" class="btn-cancel">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2026 Smart Transportation System | Academic Demo
+  </footer>
+
+</div>
+
+
+</body>
+</html>

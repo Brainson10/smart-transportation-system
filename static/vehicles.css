@@ -1,0 +1,181 @@
+/* ================================
+   RESET & BASE
+================================ */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f4f6f8;
+  color: #111827;
+}
+
+/* ================================
+   PAGE LAYOUT (FOOTER FIX)
+================================ */
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+}
+
+/* ================================
+   HEADER (DARK GRADIENT)
+================================ */
+.hero-header {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: white;
+  padding: 36px 48px;
+}
+
+.hero-header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.hero-header p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.header-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 12px;
+}
+
+/* ================================
+   BUTTONS
+================================ */
+.btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #2563eb;
+}
+
+.btn.outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: white;
+}
+
+.btn.outline:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.btn.small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn.danger:hover {
+  background: #dc2626;
+}
+
+/* ================================
+   VEHICLE LIST SECTION
+================================ */
+.vehicle-section {
+  padding: 32px 48px;
+}
+
+.vehicle-section h2 {
+  margin: 0 0 18px;
+  font-size: 22px;
+}
+
+/* ================================
+   VEHICLE CARD
+================================ */
+.vehicle-card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+}
+
+.vehicle-info strong {
+  font-size: 16px;
+  display: block;
+}
+
+.vehicle-info .meta {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* ================================
+   STATUS BADGES
+================================ */
+.status {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-right: 10px;
+}
+
+.status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.inactive {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+/* ================================
+   ACTIONS
+================================ */
+.vehicle-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ================================
+   FOOTER (STICKY)
+================================ */
+.footer {
+  background: #e5e7eb;
+  text-align: center;
+  padding: 14px;
+  font-size: 14px;
+  color: #374151;
+}

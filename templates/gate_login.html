@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='gate.css') }}">
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <div class="gate-header">
+        <h1>Gate Security Login</h1>
+        <p>Smart Transportation System – Secure Gate Access</p>
+    </div>
+
+    <div class="page-content">
+        <div class="card">
+            <h2>Select Gate & Authenticate</h2>
+            <p>Choose gate location and enter authorized password</p>
+
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('gate_login') }}">
+                <div class="form-group">
+                    <label>Gate Location</label>
+                    <select name="location" required>
+                        {% for loc in locations %}
+                        <option value="{{ loc[0] }}">{{ loc[0] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Gate Password</label>
+                    <input type="password" name="password" required>
+                </div>
+
+                <button class="btn-primary" type="submit">Enter Gate</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 Smart Transportation System | Academic Demo
+    </div>
+
+</div>
+
+
+</body>
+</html>

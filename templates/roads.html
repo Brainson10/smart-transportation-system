@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Risk Classification</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <h1>AI Risk Classification</h1>
+    <p>Machine-learning based road safety intelligence</p>
+  </div>
+
+  <div class="header-actions">
+    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">
+      Re-Run AI
+    </a>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">
+      Back to Dashboard
+    </a>
+
+    <a href="{{ url_for('add_road') }}" class="btn-outline">
+      + Add New Road
+    </a>
+  </div>
+</header>
+
+
+<section>
+  <h2>All Road Segments</h2>
+
+  {% if roads %}
+    <div class="risk-grid">
+      {% for r in roads %}
+        <div class="risk-card {{ r[1]|lower }}">
+          <h3>{{ r[0] }}</h3>
+          <span class="risk-level">{{ r[1] }}</span>
+          <p>{{ r[2] }}</p>
+          <div class="confidence">
+            AI Confidence: {{ r[3] }}%
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No AI predictions available. Run the model first.</p>
+  {% endif %}
+</section>
+
+<footer class="footer">
+  © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+</body>
+</html>

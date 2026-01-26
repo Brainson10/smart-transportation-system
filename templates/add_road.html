@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Road Segment</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='add_road.css') }}">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-left">
+    <h1>Add Road Segment</h1>
+    <p>Smart Transportation – AI Risk Evaluation</p>
+  </div>
+
+  <div class="header-actions">
+    <a href="{{ url_for('manage_roads') }}" class="btn-outline">
+      ← Back to Road Analysis
+    </a>
+  </div>
+</header>
+
+<!-- ===== FORM CARD ===== -->
+<section class="page">
+  <form method="POST" class="card">
+
+    <div class="field">
+      <label>Road / Segment Name</label>
+      <input type="text" name="segment" required>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>Curved Road?</label>
+        <!-- FIXED: name + values -->
+        <select name="curve">
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Junction Present?</label>
+        <!-- FIXED: numeric values -->
+        <select name="junction">
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Visibility</label>
+        <!-- Low = risky -->
+        <select name="visibility">
+          <option value="0">Low</option>
+          <option value="1">Medium</option>
+          <option value="2">High</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Lane Width</label>
+        <!-- Narrow = risky -->
+        <select name="lane_width">
+          <option value="0">Narrow</option>
+          <option value="1">Medium</option>
+          <option value="2">Wide</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Traffic Density</label>
+        <!-- High = risky -->
+        <select name="traffic_density">
+          <option value="0">Low</option>
+          <option value="1">Medium</option>
+          <option value="2">High</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="primary-btn">
+        Predict Risk & Save
+      </button>
+    </div>
+
+    <p class="note">
+      The AI model evaluates road geometry and traffic conditions to predict accident risk.
+    </p>
+
+  </form>
+</section>
+
+</body>
+</html>

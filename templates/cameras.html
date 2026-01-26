@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Management</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <h1>Camera Management</h1>
+    <p>Surveillance infrastructure and coverage</p>
+  </div>
+
+  <div class="header-actions">
+    <a href="{{ url_for('add_camera') }}" class="run-ai-btn">
+      + Add Camera
+    </a>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">
+      Back to Dashboard
+    </a>
+  </div>
+</header>
+
+<section>
+  <h2>Registered Cameras</h2>
+
+  {% if cameras %}
+    {% for c in cameras %}
+      <div class="vehicle">
+        <div>
+          <strong>{{ c[1] }}</strong><br>
+          <small>
+            Location: {{ c[2] }} · Zone: {{ c[3] }}<br>
+            Coverage: {{ c[5] }}
+          </small>
+        </div>
+
+        <div class="actions">
+          <span class="status {{ c[4]|lower }}">
+            {{ c[4] }}
+          </span>
+
+          <a href="{{ url_for('toggle_camera', camera_id=c[0]) }}"
+             class="action-btn toggle-btn">
+            Toggle
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>No cameras registered yet.</p>
+  {% endif %}
+</section>
+
+<footer>
+  © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+</body>
+</html>

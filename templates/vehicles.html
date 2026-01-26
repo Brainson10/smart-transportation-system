@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vehicle Management</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='vehicles.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- ================= HEADER ================= -->
+  <header class="hero-header">
+    <h1>Vehicle Management</h1>
+    <p>Registered campus vehicles and access control</p>
+
+    <div class="header-actions">
+      <a href="{{ url_for('register_vehicle') }}" class="btn primary">
+        + Register Vehicle
+      </a>
+      <a href="{{ url_for('admin_dashboard') }}" class="btn outline">
+        Back to Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- ================= CONTENT ================= -->
+  <main class="content">
+    <section class="vehicle-section">
+      <h2>Registered Vehicles</h2>
+
+      {% if vehicles|length == 0 %}
+        <p style="opacity:0.6;">No vehicles registered.</p>
+      {% endif %}
+
+      {% for v in vehicles %}
+      <div class="vehicle-card">
+
+        <!-- Vehicle Info -->
+        <div class="vehicle-info">
+          <strong>{{ v.number }}</strong>
+          <div class="meta">{{ v.owner }} · {{ v.type }}</div>
+        </div>
+
+        <!-- Vehicle Actions -->
+        <div class="vehicle-actions">
+
+          <!-- DELETE -->
+          <a href="{{ url_for('delete_vehicle', vehicle_id=v.id) }}"
+             class="btn danger small"
+             onclick="return confirm('Delete this vehicle?');">
+            Delete
+          </a>
+
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </section>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    © 2026 Smart Transportation System | Academic Demo
+  </footer>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gate Dashboard</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen flex flex-col bg-slate-100">
+
+<!-- ================= HEADER ================= -->
+<header class="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-10 py-6">
+    <h1 class="text-2xl font-semibold">Gate Dashboard</h1>
+    <p class="text-sm text-slate-300">Real-time Vehicle Entry Monitoring</p>
+</header>
+
+<!-- ================= MAIN ================= -->
+<main class="flex-1 px-10 py-8">
+    <div class="grid grid-cols-12 gap-8">
+
+        <!-- CAMERA -->
+        <div class="col-span-8 bg-white rounded-xl shadow-lg p-5">
+            <h3>Live Camera – {{ gate | capitalize }} Gate</h3>
+
+            <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+                <img src="{{ url_for('video_feed', gate=gate) }}"
+                 class="camera-feed"
+                alt="Live Camera">
+
+            </div>
+
+            <p class="mt-2 text-sm text-green-600 font-medium">
+                ● Live · Automatic Detection Enabled
+            </p>
+        </div>
+
+        <!-- RESULT -->
+        <div class="col-span-4 bg-white rounded-xl shadow-lg p-5">
+            <h3 class="text-lg font-semibold mb-4">ANPR Result</h3>
+
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">Vehicle Number</span>
+                    <span id="vehicle" class="font-medium">—</span>
+                </div>
+
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">OCR Confidence</span>
+                    <span id="confidence" class="font-medium">—</span>
+                </div>
+
+                <div class="flex justify-between border-b pb-2">
+                    <span class="text-slate-500">Decision</span>
+                    <span id="decision" class="font-semibold text-slate-600">
+                        Waiting…
+                    </span>
+                </div>
+
+                <div class="flex justify-between">
+                    <span class="text-slate-500">Reason</span>
+                    <span id="reason" class="font-medium">—</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-slate-200 text-center text-xs text-slate-600 py-3">
+    © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+<!-- ================= LIVE UPDATE ================= -->
+<script>
+setInterval(() => {
+    fetch("/gate/latest_result")
+        .then(res => res.json())
+        .then(d => {
+            if (!d) return;
+
+            const vehicleEl = document.getElementById("vehicle");
+            const confidenceEl = document.getElementById("confidence");
+            const decisionEl = document.getElementById("decision");
+            const reasonEl = document.getElementById("reason");
+
+            // WAITING STATE
+            if (d.decision === "WAITING") {
+                vehicleEl.innerText = "—";
+                confidenceEl.innerText = "—";
+                decisionEl.innerText = "Waiting…";
+                decisionEl.className = "font-semibold text-slate-600";
+                reasonEl.innerText = d.reason || "No vehicle detected";
+                return;
+            }
+
+            // NORMAL STATE
+            vehicleEl.innerText = d.vehicle_number || "—";
+            confidenceEl.innerText = d.confidence + "%";
+            decisionEl.innerText = d.decision;
+            reasonEl.innerText = d.reason;
+
+            if (d.decision.includes("ALLOW")) {
+                decisionEl.className = "font-semibold text-green-600";
+            } else if (d.decision.includes("DENY")) {
+                decisionEl.className = "font-semibold text-red-600";
+            } else if (d.decision.includes("MANUAL")) {
+                decisionEl.className = "font-semibold text-yellow-600";
+            } else {
+                decisionEl.className = "font-semibold text-slate-600";
+            }
+        });
+}, 2000);
+</script>
+
+</body>
+</html>
