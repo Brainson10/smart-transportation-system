@@ -1,5 +1,18 @@
-flask
+# Web Framework
+Flask
+
+# Computer Vision
 opencv-python
-pytesseract
-scikit-learn
 numpy
+
+# OCR
+pytesseract
+
+# Deep Learning (YOLOv8)
+ultralytics
+torch
+torchvision
+
+# Machine Learning (Admin AI)
+scikit-learn
+joblib
