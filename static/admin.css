@@ -307,18 +307,75 @@ h2 {
   border: 1px solid #d1d5db;
 }
 
-/* =========================
-   FOOTER
-   ========================= */
-footer {
-  margin-top: 40px;
-  padding: 20px;
-  text-align: center;
-  background: #e5e7eb;
-  font-size: 14px;
-  color: #374151;
+
+/* ================= ADMIN SECTIONS ================= */
+.admin-section {
+    margin-top: 40px;
 }
 
+.section-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #0f172a;
+}
+
+/* ================= LOCATION GRID ================= */
+.location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.location-card {
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    border-left: 6px solid #22c55e;
+}
+
+.location-card.danger {
+    border-left-color: #ef4444;
+}
+
+.location-card h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.violation-count {
+    margin-top: 8px;
+    font-size: 15px;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+/* ================= VIOLATION TABLE ================= */
+.violation-table {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.violation-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.violation-table th {
+    text-align: left;
+    padding: 10px;
+    background: #f1f5f9;
+    font-weight: 700;
+}
+
+.violation-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
 
 
 /* =========================
@@ -387,14 +444,43 @@ html, body {
     flex: 1;
 }
 
-/* Footer styling */
-.footer {
-    background: #e9ecef;
-    text-align: center;
-    padding: 15px;
-    font-size: 14px;
-    color: #333;
+/* ===============================
+   STICKY FOOTER (NO LAYOUT CHANGE)
+   =============================== */
+
+/* ===============================
+   ADMIN DASHBOARD STICKY FOOTER
+   (SAFE FOR LONG + SHORT PAGES)
+   =============================== */
+
+html, body {
+  height: 100%;
+  margin: 0;
 }
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fb;
+}
+
+/* All page content grows here */
+body > *:not(.footer) {
+  flex-shrink: 0;
+}
+
+/* Footer sticks to bottom ONLY when needed */
+.footer {
+  margin-top: auto;
+  background: #eef1f6;
+  color: #555;
+  text-align: center;
+  font-size: 14px;
+  padding: 18px 0;
+  border-top: 1px solid #e0e4ec;
+}
+
+
 
 
 /* =========================

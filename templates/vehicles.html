@@ -17,9 +17,10 @@
     <p>Registered campus vehicles and access control</p>
 
     <div class="header-actions">
-      <a href="{{ url_for('register_vehicle') }}" class="btn primary">
-        + Register Vehicle
+      <a href="{{ url_for('register') }}" class="btn primary">
+        Register Vehicle
       </a>
+
       <a href="{{ url_for('admin_dashboard') }}" class="btn outline">
         Back to Dashboard
       </a>
@@ -39,10 +40,21 @@
       <div class="vehicle-card">
 
         <!-- Vehicle Info -->
+
         <div class="vehicle-info">
-          <strong>{{ v.number }}</strong>
-          <div class="meta">{{ v.owner }} · {{ v.type }}</div>
+          <h3>{{ v.number }}</h3>
+          <p>
+            {{ v.owner }} · {{ v.type }} {{ v.role }} <br>
+           <strong>{{ v.phone }}</strong>
+          </p>
+
+
+          <p class="violation-text">
+             Violations: <strong>{{ v.violation_count }}</strong>
+          </p>
         </div>
+
+
 
         <!-- Vehicle Actions -->
         <div class="vehicle-actions">

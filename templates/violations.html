@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Violation Details</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='violations.css') }}">
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+<header class="header">
+  <div class="header-inner wide">
+    <div class="header-left">
+      <h1>Violation Details</h1>
+      <p>Complete history of gate violations</p>
+    </div>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">
+      ← Back to Dashboard
+    </a>
+  </div>
+</header>
+
+<!-- ================= CONTENT ================= -->
+<main class="container wide">
+
+  <h2 class="section-title left">All Recorded Violations</h2>
+
+  <div class="table-wrapper wide">
+    {% if violations and violations|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Vehicle Number</th>
+          <th>Location</th>
+          <th>Violation Type</th>
+          <th>Date & Time</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for v in violations %}
+        <tr>
+          <td class="vehicle">{{ v[0] }}</td>
+          <td>{{ v[1] }}</td>
+          <td class="violation-type">{{ v[2] }}</td>
+          <td class="time">{{ v[3] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="empty">No violations recorded.</p>
+    {% endif %}
+  </div>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+</body>
+</html>

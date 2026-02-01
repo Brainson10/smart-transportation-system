@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Location</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='add_camera.css') }}">
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header class="hero-header">
+    <h1>Add New Location</h1>
+    <p>Smart Transportation System – AI Safety Intelligence</p>
+
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-back">
+        ← Back to Admin Dashboard
+    </a>
+</header>
+
+<!-- ================= FORM ================= -->
+<main class="content">
+    <div class="form-card">
+        <h2>Add Location</h2>
+        <p class="subtitle">
+            Register a new gate / campus location
+        </p>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Location Name</label>
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="e.g. Hostel Gate"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Prohibited Start Time</label>
+                <input
+                    type="time"
+                    name="prohibited_start"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Prohibited End Time</label>
+                <input
+                    type="time"
+                    name="prohibited_end"
+                    required
+                >
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">
+                    Add Location
+                </button>
+
+                <a href="{{ url_for('admin_dashboard') }}" class="btn-cancel">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+    © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+</body>
+</html>

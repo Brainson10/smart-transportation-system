@@ -15,51 +15,20 @@
   </div>
 
   <div class="header-actions">
-  <a href="{{ url_for('home') }}" class="btn-outline">
-    Home
-  </a>
-
-  <a href="{{ url_for('manage_vehicles') }}" class="btn-outline">
-    Manage Vehicles
-  </a>
-
-  <a href="{{ url_for('manage_cameras') }}" class="btn-outline">
-    Manage Cameras
-  </a>
-
-  <a href="{{ url_for('run_ai') }}" class="run-ai-btn">
-    Run AI Risk Prediction
-  </a>
-</div>
-
+    <a href="{{ url_for('home') }}" class="btn-outline">Home</a>
+    <a href="{{ url_for('manage_vehicles') }}" class="btn-outline">Manage Vehicles</a>
+    <a href="{{ url_for('manage_cameras') }}" class="btn-outline">Manage Cameras</a>
+    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">Run AI Risk Prediction</a>
+  </div>
 </header>
 
 <!-- ================= STATS ================= -->
 <section class="stats">
-  <div class="stat-card">
-    Total Vehicles<br>
-    <b>{{ total_vehicles }}</b>
-  </div>
-
-  <div class="stat-card">
-    Active Vehicles<br>
-    <b>{{ active_vehicles }}</b>
-  </div>
-
-  <div class="stat-card">
-    Total Cameras<br>
-    <b>{{ total_cameras }}</b>
-  </div>
-
-  <div class="stat-card">
-    Cameras Online<br>
-    <b>{{ online_cameras }} / {{ total_cameras }}</b>
-  </div>
-
-  <div class="stat-card">
-    AI Alerts<br>
-    <b>{{ alerts }}</b>
-  </div>
+  <div class="stat-card">Total Vehicles<br><b>{{ total_vehicles }}</b></div>
+  <div class="stat-card">Active Vehicles<br><b>{{ active_vehicles }}</b></div>
+  <div class="stat-card">Total Cameras<br><b>{{ total_cameras }}</b></div>
+  <div class="stat-card">Cameras Online<br><b>{{ online_cameras }} / {{ total_cameras }}</b></div>
+  <div class="stat-card">AI Alerts<br><b>{{ alerts }}</b></div>
 </section>
 
 <!-- ================= TOP HIGH RISK ROADS ================= -->
@@ -91,20 +60,13 @@
 <!-- ================= AI INSIGHTS ================= -->
 <section class="insights">
   <h2>AI-Generated Safety Insights</h2>
-
   <ul>
     {% if not high_risk_roads or high_risk_roads|length == 0 %}
-      <li>
-        No critical risk patterns detected. Road network currently appears stable.
-      </li>
+      <li>No critical risk patterns detected.</li>
     {% elif high_risk_roads|length == 1 %}
-      <li>
-        A single high-risk road segment has been identified. Localized intervention is recommended.
-      </li>
+      <li>A single high-risk road segment detected.</li>
     {% else %}
-      <li>
-        Multiple high-risk road segments detected, indicating concentrated safety concerns.
-      </li>
+      <li>Multiple high-risk road segments detected.</li>
     {% endif %}
 
     {% if high_risk_roads %}
@@ -117,15 +79,68 @@
     {% endif %}
 
     {% if online_cameras < total_cameras %}
-      <li>
-        Some cameras are currently offline. Infrastructure maintenance may be required.
-      </li>
+      <li>Some cameras are currently offline.</li>
     {% else %}
-      <li>
-        All registered cameras are currently operational.
-      </li>
+      <li>All cameras are operational.</li>
     {% endif %}
   </ul>
+</section>
+
+<!-- ================= LOCATION VIOLATIONS ================= -->
+<section class="admin-section">
+  <h2 class="section-title">Location Violation Overview</h2>
+
+  <div class="location-grid">
+    {% for loc in locations %}
+      <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
+        <h3>{{ loc[0] }}</h3>
+        <p class="violation-count">
+          Violations: <strong>{{ loc[1] }}</strong>
+        </p>
+      </div>
+    {% endfor %}
+    <div style="margin-bottom: 16px;">
+      <a href="{{ url_for('add_location') }}" class="view-btn">
+        + Add Location
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TODAY'S VIOLATIONS ================= -->
+<section class="admin-section">
+  <h2 class="section-title">Today’s Gate Violations</h2>
+
+  <div class="violation-table">
+    {% if today_violations and today_violations|length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>Vehicle</th>
+            <th>Location</th>
+            <th>Type</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in today_violations %}
+            <tr>
+              <td>{{ v[0] }}</td>
+              <td>{{ v[1] }}</td>
+              <td>{{ v[2] }}</td>
+              <td>{{ v[3] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="color:#64748b;">No violations recorded today.</p>
+    {% endif %}
+  </div>
+
+  <a href="{{ url_for('view_violations') }}" class="view-btn" style="margin-top:12px; display:inline-block;">
+    View Violation Details →
+  </a>
 </section>
 
 <!-- ================= CAMERA OVERVIEW ================= -->
@@ -133,17 +148,9 @@
   <h2>Camera Infrastructure Overview</h2>
 
   <div class="camera-grid">
-    <div class="camera online">
-      Online Cameras: {{ online_cameras }}
-    </div>
-
-    <div class="camera offline">
-      Offline Cameras: {{ total_cameras - online_cameras }}
-    </div>
-
-    <div class="camera">
-      Total Cameras: {{ total_cameras }}
-    </div>
+    <div class="camera online">Online Cameras: {{ online_cameras }}</div>
+    <div class="camera offline">Offline Cameras: {{ total_cameras - online_cameras }}</div>
+    <div class="camera">Total Cameras: {{ total_cameras }}</div>
   </div>
 
   <div style="margin-top: 20px;">
@@ -154,7 +161,7 @@
 </section>
 
 <!-- ================= FOOTER ================= -->
-<footer>
+<footer class="footer" >
   © 2026 Smart Transportation System | Academic Demo
 </footer>
 

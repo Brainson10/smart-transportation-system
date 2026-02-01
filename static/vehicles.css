@@ -160,6 +160,14 @@ html, body {
   color: #7f1d1d;
 }
 
+.violation-text {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+
 /* ================================
    ACTIONS
 ================================ */

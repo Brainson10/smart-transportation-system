@@ -31,7 +31,7 @@ def score_to_risk(score):
 # =================================================
 def predict_single_road(curve, junction, visibility, lane_width, traffic_density):
     """
-    Predict risk for ONE road segment (real-time)
+    Predict risk for ONE road segment using form input
     """
 
     X_input = pd.DataFrame(
@@ -46,11 +46,9 @@ def predict_single_road(curve, junction, visibility, lane_width, traffic_density
     )
 
     score = model.predict(X_input)[0]
-
     confidence = min(100, int((score / 8) * 100))
     predicted_risk = score_to_risk(score)
 
-    # Explainable AI
     reasons = []
     if curve == 1:
         reasons.append("Curved road")
@@ -78,7 +76,7 @@ def run_predictions():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    # Clear old predictions (derived data)
+    # Clear old predictions
     cur.execute("DELETE FROM predictions")
 
     # Fetch road features
@@ -111,7 +109,6 @@ def run_predictions():
         confidence = min(100, int((score / 8) * 100))
         predicted_risk = score_to_risk(score)
 
-        # Explainable AI
         reasons = []
         if curve == 1:
             reasons.append("Curved road")
@@ -126,7 +123,6 @@ def run_predictions():
 
         explanation = ", ".join(reasons) if reasons else "Normal road conditions"
 
-        # Store prediction
         cur.execute("""
             INSERT INTO predictions
             (segment, predicted_risk, explanation, confidence)

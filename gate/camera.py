@@ -119,3 +119,30 @@ def _black_frame():
         b"--frame\r\n"
         b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
     )
+
+
+def generate_demo_frames(video_path):
+    cap = cv2.VideoCapture(video_path)
+
+    if not cap.isOpened():
+        print("Demo video not found")
+        return
+
+    while True:
+        success, frame = cap.read()
+
+        if not success:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 🔁 loop demo
+            continue
+
+        # 👉 SAME ANPR PIPELINE CAN BE CALLED HERE
+        # anpr_result = run_anpr(frame)
+        # decision = decide(anpr_result)
+
+        ret, buffer = cv2.imencode(".jpg", frame)
+        frame = buffer.tobytes()
+
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+        )

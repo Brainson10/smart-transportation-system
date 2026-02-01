@@ -50,6 +50,16 @@
             <input type="text" name="type" placeholder="Car / Bike / Truck" required>
           </div>
 
+          <div class="form-group">
+            <label for="role">Role</label>
+            <input type="text" id="role" name="role" placeholder="Student/Staff/Emergency vehicle" required>
+          </div>
+
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" name="phone" placeholder="Enter the Phone Number" required>
+          </div>
+
           <div class="form-actions">
             <button type="submit" class="btn primary">Register Vehicle</button>
             <a href="{{ url_for('admin_dashboard') }}" class="btn link">Cancel</a>
