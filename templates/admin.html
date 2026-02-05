@@ -126,24 +126,54 @@
 </section>
 
 <!-- ================= LOCATION VIOLATIONS ================= -->
+<!-- <section class="admin-section">
+  <h2 class="section-title">Location Violation Overview</h2>
+
+  {% if location_overview %}
+    <div class="location-grid">
+      {% for loc in location_overview %}
+        <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
+          <h3>{{ loc[0] }}</h3>
+          <p class="violation-count">
+            Violations: <strong>{{ loc[1] }}</strong>
+          </p>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No AI road segments available.</p>
+  {% endif %}
+</section> -->
+
+<!-- ================= LOCATION VIOLATIONS ================= -->
 <section class="admin-section">
   <h2 class="section-title">Location Violation Overview</h2>
 
-  <div class="location-grid">
-    {% for loc in locations %}
-      <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
-        <h3>{{ loc[0] }}</h3>
-        <p class="violation-count">
-          Violations: <strong>{{ loc[1] }}</strong>
-        </p>
-      </div>
-    {% endfor %}
-    <div style="margin-bottom: 16px;">
-      <a href="{{ url_for('add_location') }}" class="view-btn">
-        + Add Location
-      </a>
+  {% if locations and locations|length > 0 %}
+    <div class="location-grid">
+      {% for loc in locations %}
+        <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
+          <h3>{{ loc[0] }}</h3>
+
+          <p class="violation-count">
+            Violations: <strong>{{ loc[1] }}</strong>
+          </p>
+
+          {% if loc[2] and loc[3] %}
+            <p class="prohibited">
+              Prohibited Time: {{ loc[2] }} – {{ loc[3] }}
+            </p>
+          {% else %}
+            <p class="prohibited muted">
+              No prohibited time set
+            </p>
+          {% endif %}
+        </div>
+      {% endfor %}
     </div>
-  </div>
+  {% else %}
+    <p>No AI road segments available.</p>
+  {% endif %}
 </section>
 
 <!-- ================= TODAY'S VIOLATIONS ================= -->

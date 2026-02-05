@@ -9,6 +9,12 @@ from gate.gate_db import init_gate_db
 from gate.camera import generate_frames
 from gate.decision import get_latest_result
 from gate import decision   # DO NOT REMOVE
+from datetime import datetime
+
+def to_12hr(time_str):
+    if not time_str:
+        return None
+    return datetime.strptime(time_str, "%H:%M").strftime("%I:%M %p")
 
 # =================================================
 # PATH CONFIG
@@ -53,38 +59,62 @@ def home():
 # =================================================
 @app.route("/admin")
 def admin_dashboard():
+    # =============================
+    # VEHICLE + VIOLATIONS DB
+    # =============================
     veh = get_vehicle_db()
-    cur = veh.cursor()
+    vcur = veh.cursor()
 
-    cur.execute("SELECT COUNT(*) FROM vehicles")
-    total_vehicles = cur.fetchone()[0]
+    vcur.execute("SELECT COUNT(*) FROM vehicles")
+    total_vehicles = vcur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM vehicles WHERE status='ACTIVE'")
-    active_vehicles = cur.fetchone()[0]
+    vcur.execute("SELECT COUNT(*) FROM vehicles WHERE status='ACTIVE'")
+    active_vehicles = vcur.fetchone()[0]
 
     today = date.today().isoformat()
-    cur.execute("""
+    vcur.execute("""
         SELECT vehicle_number, location, violation_type, timestamp
         FROM violations
         WHERE DATE(timestamp)=?
         ORDER BY timestamp DESC
     """, (today,))
-    today_violations = cur.fetchall()
+    today_violations = vcur.fetchall()
+
+    # violation count per road
+    vcur.execute("""
+        SELECT location, COUNT(*)
+        FROM violations
+        GROUP BY location
+    """)
+    violation_map = {row[0]: row[1] for row in vcur.fetchall()}
+
+    # prohibited time per road
+    vcur.execute("""
+        SELECT name, prohibited_start, prohibited_end
+        FROM locations
+    """)
+    prohibited_map = {
+        row[0]: (row[1], row[2]) for row in vcur.fetchall()
+    }
+
     veh.close()
 
+    # =============================
+    # AUTHORITY DB (AI)
+    # =============================
     auth = get_authority_db()
-    cur = auth.cursor()
+    acur = auth.cursor()
 
-    cur.execute("SELECT COUNT(*) FROM cameras")
-    total_cameras = cur.fetchone()[0]
+    acur.execute("SELECT COUNT(*) FROM cameras")
+    total_cameras = acur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM cameras WHERE status='ONLINE'")
-    online_cameras = cur.fetchone()[0]
+    acur.execute("SELECT COUNT(*) FROM cameras WHERE status='ONLINE'")
+    online_cameras = acur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM predictions")
-    alerts = cur.fetchone()[0]
+    acur.execute("SELECT COUNT(*) FROM predictions")
+    alerts = acur.fetchone()[0]
 
-    cur.execute("""
+    acur.execute("""
         SELECT segment, predicted_risk, explanation, confidence
         FROM predictions
         ORDER BY 
@@ -96,20 +126,60 @@ def admin_dashboard():
             confidence DESC
         LIMIT 3
     """)
-    high_risk_roads = cur.fetchall()
+    high_risk_roads = acur.fetchall()
+
+    acur.execute("SELECT segment FROM predictions")
+    segments = acur.fetchall()
+
     auth.close()
 
+    # =============================
+    # LOCATION OVERVIEW (MERGED)
+    # =============================
+    # locations = []
+
+    # for (road,) in segments:
+    #     violations = violation_map.get(road, 0)
+    #     start, end = prohibited_map.get(road, (None, None))
+    #     locations.append((road, violations, start, end))
+    # =============================
+    # LOCATION OVERVIEW (MERGED)
+    # =============================
+    location_overview = []
+
+    veh = get_vehicle_db()
+    vcur = veh.cursor()
+
+    for seg in segments:
+        road = seg[0]
+        count = violation_map.get(road, 0)
+
+        vcur.execute("""
+            SELECT prohibited_start, prohibited_end
+            FROM locations
+            WHERE name=?
+        """, (road,))
+        row = vcur.fetchone()
+
+        start = to_12hr(row[0]) if row and row[0] else None
+        end = to_12hr(row[1]) if row and row[1] else None
+
+        location_overview.append((road, count, start, end))
+
+    veh.close()
+
     return render_template(
-        "admin.html",
-        total_vehicles=total_vehicles,
-        active_vehicles=active_vehicles,
-        total_cameras=total_cameras,
-        online_cameras=online_cameras,
-        alerts=alerts,
-        high_risk_roads=high_risk_roads,
-        today_violations=today_violations,
-        locations=[]
-    )
+    "admin.html",
+    total_vehicles=total_vehicles,
+    active_vehicles=active_vehicles,
+    total_cameras=total_cameras,
+    online_cameras=online_cameras,
+    alerts=alerts,
+    high_risk_roads=high_risk_roads,
+    today_violations=today_violations,
+    locations=location_overview   #  FIXED
+)
+    
 
 # =================================================
 # ADD ROAD (AI INPUT)
@@ -194,6 +264,12 @@ def edit_prohibited_time(segment):
     conn = get_vehicle_db()
     cur = conn.cursor()
 
+    # 🔑 ENSURE LOCATION EXISTS
+    cur.execute("""
+        INSERT OR IGNORE INTO locations (name, violation_count)
+        VALUES (?, 0)
+    """, (segment,))
+
     if request.method == "POST":
         cur.execute("""
             UPDATE locations
@@ -206,15 +282,16 @@ def edit_prohibited_time(segment):
         ))
         conn.commit()
         conn.close()
-        return redirect(url_for("manage_roads"))
+        return redirect(url_for("admin_dashboard"))
 
     cur.execute("""
         SELECT name, prohibited_start, prohibited_end
-        FROM locations WHERE name=?
+        FROM locations
+        WHERE name=?
     """, (segment,))
     road = cur.fetchone()
-    conn.close()
 
+    conn.close()
     return render_template("edit_prohibited_time.html", road=road)
 
 @app.route("/admin/location/add", methods=["GET", "POST"])
@@ -312,6 +389,45 @@ def manage_cameras():
     cameras = cur.fetchall()
     conn.close()
     return render_template("cameras.html", cameras=cameras)
+
+@app.route("/admin/cameras/add", methods=["GET", "POST"])
+def add_camera():
+    if request.method == "POST":
+        location = request.form["location"]
+        status = request.form.get("status", "ONLINE")
+
+        conn = get_authority_db()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cameras (location, status)
+            VALUES (?, ?)
+        """, (location, status))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("manage_cameras"))
+
+    return render_template("add_camera.html")
+
+@app.route("/admin/cameras/toggle/<int:camera_id>")
+def toggle_camera(camera_id):
+    conn = get_authority_db()
+    cur = conn.cursor()
+
+    # Get current status
+    cur.execute("SELECT status FROM cameras WHERE id=?", (camera_id,))
+    row = cur.fetchone()
+
+    if row:
+        new_status = "OFFLINE" if row["status"] == "ONLINE" else "ONLINE"
+        cur.execute(
+            "UPDATE cameras SET status=? WHERE id=?",
+            (new_status, camera_id)
+        )
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for("manage_cameras"))
 
 # =================================================
 # GATE
