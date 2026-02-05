@@ -7,6 +7,7 @@
 </head>
 <body>
 
+<!-- ================= HEADER ================= -->
 <header class="header">
   <div class="header-left">
     <h1>AI Risk Classification</h1>
@@ -14,42 +15,67 @@
   </div>
 
   <div class="header-actions">
-    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">
-      Re-Run AI
-    </a>
-
-    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">
-      Back to Dashboard
-    </a>
-
-    <!-- FIXED HERE -->
-    <a href="{{ url_for('add_road') }}" class="btn-outline">
-      + Add New Road
-    </a>
+    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">Re-Run AI</a>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">Back to Dashboard</a>
+    <a href="{{ url_for('add_road') }}" class="btn-outline">+ Add New Road</a>
   </div>
 </header>
 
+<!-- ================= CONTENT ================= -->
 <section>
   <h2>All Road Segments</h2>
 
   {% if roads %}
     <div class="risk-grid">
+
       {% for r in roads %}
-        <div class="risk-card {{ r[1]|lower }}">
-          <h3>{{ r[0] }}</h3>
-          <span class="risk-level">{{ r[1] }}</span>
-          <p>{{ r[2] }}</p>
+        <div class="risk-card {{ r.predicted_risk|lower }}">
+
+          <h3>{{ r.segment }}</h3>
+
+          <span class="risk-level {{ r.predicted_risk|lower }}">
+            {{ r.predicted_risk }}
+          </span>
+
+          <p class="risk-reason">
+            {{ r.explanation }}
+          </p>
+
           <div class="confidence">
-            AI Confidence: {{ r[3] }}%
+            AI Confidence: {{ r.confidence }}%
           </div>
+
+          <div class="accident-count">
+            Accidents Recorded (Historical): 
+            <strong>{{ r.accident_count }}</strong>
+          </div>
+
+          <!-- 🔥 Explain crash severity -->
+          {% if r.accident_count >= 15 %}
+            <span class="badge danger">Crash Hotspot</span>
+          {% elif r.accident_count >= 6 %}
+            <span class="badge warning">Moderate Risk Zone</span>
+          {% else %}
+            <span class="badge safe">Low Crash History</span>
+          {% endif %}
+
+          <!-- PROHIBITED TIME -->
+          <div class="prohibited-time-action">
+            <a href="{{ url_for('edit_prohibited_time', segment=r.segment) }}">
+              Prohibited Time
+            </a>
+          </div>
+
         </div>
       {% endfor %}
+
     </div>
   {% else %}
     <p>No AI predictions available. Run the model first.</p>
   {% endif %}
 </section>
 
+<!-- ================= FOOTER ================= -->
 <footer class="footer">
   © 2026 Smart Transportation System | Academic Demo
 </footer>

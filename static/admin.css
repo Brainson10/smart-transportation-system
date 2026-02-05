@@ -119,35 +119,6 @@ h2 {
   gap: 20px;
 }
 
-.risk-card {
-  background: #ffffff;
-  padding: 18px;
-  border-radius: 14px;
-  box-shadow: 0 5px 14px rgba(0,0,0,0.08);
-}
-
-.risk-card.high {
-  border-left: 6px solid #ef4444;
-}
-
-.risk-card.medium {
-  border-left: 6px solid #f59e0b;
-}
-
-.risk-card.low {
-  border-left: 6px solid #22c55e;
-}
-
-.risk-level {
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-.confidence {
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 6px;
-}
 
 /* =========================
    INSIGHTS
@@ -209,6 +180,91 @@ h2 {
 
 .vehicle small {
   color: #6b7280;
+}
+
+/* =========================================================
+   TOP HIGH-RISK ROAD SEGMENTS (ADMIN DASHBOARD)
+   ========================================================= */
+
+.top-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 16px;
+}
+
+.top-risk-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  border-left: 6px solid #e5e7eb;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.top-risk-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+}
+
+/* Risk color strip */
+.top-risk-card.high {
+  border-left-color: #ef4444;
+}
+
+.top-risk-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.top-risk-card.low {
+  border-left-color: #22c55e;
+}
+
+/* Title */
+.top-risk-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+/* Risk pill */
+.risk-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.risk-pill.high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.risk-pill.medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.risk-pill.low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Explanation text */
+.top-risk-card .risk-reason {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+/* Confidence */
+.top-risk-card .confidence {
+  font-size: 13px;
+  color: #334155;
 }
 
 /* =========================
@@ -403,6 +459,139 @@ h2 {
   background: #e0e7ff;
   color: #1d4ed8;
 }
+
+
+/* ================= RISK CARD (IMPROVED) ================= */
+
+.risk-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+  border-left: 6px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.risk-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+}
+
+/* Risk Color Strip */
+.risk-card.high {
+  border-left-color: #ef4444;
+}
+
+.risk-card.medium {
+  border-left-color: #f59e0b;
+}
+
+.risk-card.low {
+  border-left-color: #22c55e;
+}
+
+/* Title */
+.risk-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Risk Label */
+.risk-level {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+.risk-level.high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.risk-level.medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.risk-level.low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Explanation */
+.risk-reason {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+/* Info rows */
+.confidence,
+.accident-count {
+  font-size: 13px;
+  color: #334155;
+}
+
+/* Accident emphasis */
+.accident-count strong {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Status badge */
+.badge {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+
+.badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.safe {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Prohibited time button */
+.prohibited-time-action {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.prohibited-time-action a {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #0f172a;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.prohibited-time-action a:hover {
+  background: #e2e8f0;
+}
+
 
 
 /* =========================

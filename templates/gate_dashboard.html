@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Gate Dashboard</title>
-
-    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -13,96 +11,109 @@
 <!-- ================= TOP NAVBAR ================= -->
 <header class="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-10 py-5 shadow">
     <div class="flex items-center justify-between">
-
-        <!-- LEFT: TITLE -->
         <div>
             <h1 class="text-xl font-semibold">Gate Dashboard</h1>
-            <p class="text-sm text-slate-300">
-                Real-time Vehicle Entry Monitoring
-            </p>
+            <p class="text-sm text-slate-300">Real-time Vehicle Entry Monitoring</p>
         </div>
-
-        <!-- RIGHT: HOME BUTTON -->
-        <a
-            href="/"
-            class="px-5 py-2 rounded-lg border border-slate-500
-                   text-sm font-semibold text-white
-                   hover:bg-slate-700 transition"
-        >
-             Home
+        <a href="/" class="px-5 py-2 rounded-lg border border-slate-500 text-sm font-semibold hover:bg-slate-700">
+            Home
         </a>
-
     </div>
 </header>
 
 <!-- ================= MAIN CONTENT ================= -->
 <main class="flex-1 px-10 py-8">
-    <div class="grid grid-cols-12 gap-8">
+<div class="grid grid-cols-12 gap-8">
 
-        <!-- ================= LIVE CAMERA CARD ================= -->
-        <div class="col-span-8 bg-white rounded-xl shadow p-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-3">
-                Live Camera – {{ gate | capitalize }} Gate
-            </h2>
+<!-- ================= LIVE CAMERA ================= -->
+<div class="col-span-8 bg-white rounded-xl shadow p-6">
+<h2 class="text-sm font-semibold text-slate-700 mb-3">
+    Live Camera – {{ gate | capitalize }} Gate
+</h2>
 
-            <div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-                <img
-                    src="{{ url_for('video_feed', gate=gate) }}"
-                    alt="Live Camera"
-                    class="w-full h-full object-cover"
-                >
-            </div>
+<div class="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+    <img src="{{ url_for('video_feed', gate=gate) }}" class="w-full h-full object-cover">
+</div>
 
-            <p class="mt-3 text-sm text-green-600 font-medium flex items-center gap-2">
-                <span class="w-2 h-2 bg-green-600 rounded-full"></span>
-                Live · Automatic Detection Enabled
-            </p>
-        </div>
+<!-- 🔥 DETECTED PLATE BOX -->
+<div id="detectedPlateBox"
+     class="hidden mt-4 px-4 py-4 rounded-lg bg-slate-100 border border-slate-300">
 
-        <!-- ================= ANPR RESULT CARD ================= -->
-        <div class="col-span-4 bg-white rounded-xl shadow p-6">
-            <h2 class="text-sm font-semibold text-slate-700 mb-6">
-                ANPR Result
-            </h2>
+    <p class="text-sm text-slate-600 mb-1">Detected Number Plate</p>
 
-            <div class="space-y-5 text-sm">
+    <p id="detectedPlateText"
+       class="text-2xl font-mono font-bold tracking-widest mb-3">—</p>
 
-                <div>
-                    <p class="text-slate-500 mb-1">Vehicle Number</p>
-                    <p id="vehicle" class="font-semibold text-slate-800">—</p>
-                </div>
+    <!-- 🔥 SECURITY ACTION BUTTONS -->
+    <div id="manualActionButtons" class="flex gap-3 mb-3">
+        <button onclick="manualDecision('ALLOW')"
+            class="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700">
+            Allow Entry
+        </button>
 
-                <div>
-                    <p class="text-slate-500 mb-1">OCR Confidence</p>
-                    <p id="confidence" class="font-semibold text-slate-800">—</p>
-                </div>
-
-                <div>
-                    <p class="text-slate-500 mb-1">Decision</p>
-                    <p id="decision" class="font-semibold text-slate-600">
-                        Waiting…
-                    </p>
-                </div>
-
-                <div>
-                    <p class="text-slate-500 mb-1">Reason</p>
-                    <p id="reason" class="font-semibold text-slate-800">—</p>
-                </div>
-
-            </div>
-        </div>
-
+        <button onclick="manualDecision('DENY')"
+            class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700">
+            Deny Entry
+        </button>
     </div>
+
+    <!-- 🔥 NEXT VEHICLE -->
+    <div id="resumeBox" class="hidden">
+        <button onclick="resumeDetection()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            Next Vehicle
+        </button>
+    </div>
+</div>
+
+<p class="mt-3 text-sm text-green-600 font-medium flex items-center gap-2">
+    <span class="w-2 h-2 bg-green-600 rounded-full"></span>
+    Live · Automatic Detection Enabled
+</p>
+</div>
+
+<!-- ================= ANPR RESULT ================= -->
+<div class="col-span-4 bg-white rounded-xl shadow p-6">
+<h2 class="text-sm font-semibold text-slate-700 mb-6">ANPR Result</h2>
+
+<div class="space-y-5 text-sm">
+<div>
+    <p class="text-slate-500 mb-1">Vehicle Number</p>
+    <p id="vehicle" class="font-semibold">—</p>
+</div>
+<div>
+    <p class="text-slate-500 mb-1">OCR Confidence</p>
+    <p id="confidence" class="font-semibold">—</p>
+</div>
+<div>
+    <p class="text-slate-500 mb-1">Decision</p>
+    <p id="decision" class="font-semibold text-slate-600">Waiting…</p>
+</div>
+<div>
+    <p class="text-slate-500 mb-1">Reason</p>
+    <p id="reason" class="font-semibold">—</p>
+</div>
+<div>
+    <p class="text-slate-500 mb-1">Violation Count</p>
+    <p id="violations" class="font-semibold text-slate-800">—</p>
+</div>
+</div>
+</div>
+
+</div>
 </main>
 
-<!-- ================= FOOTER ================= -->
-<footer class="bg-slate-200 text-center text-xs text-slate-600 py-3">
-    © 2026 Smart Transportation System | Academic Demo
+<footer class="bg-slate-200 text-center text-xs py-3">
+© 2026 Smart Transportation System | Academic Demo
 </footer>
 
-<!-- ================= LIVE UPDATE SCRIPT ================= -->
+<!-- ================= SCRIPT ================= -->
 <script>
+let manualOverride = false;
+
 setInterval(() => {
+    if (manualOverride) return;
+
     fetch("/gate/latest_result")
         .then(res => res.json())
         .then(d => {
@@ -112,21 +123,43 @@ setInterval(() => {
             const confidenceEl = document.getElementById("confidence");
             const decisionEl = document.getElementById("decision");
             const reasonEl = document.getElementById("reason");
+            const violationsEl = document.getElementById("violations");
 
+            const plateBox = document.getElementById("detectedPlateBox");
+            const plateText = document.getElementById("detectedPlateText");
+            const resumeBox = document.getElementById("resumeBox");
+
+            /* ===== WAITING ===== */
             if (d.decision === "WAITING") {
                 vehicleEl.innerText = "—";
                 confidenceEl.innerText = "—";
                 decisionEl.innerText = "Waiting…";
                 decisionEl.className = "font-semibold text-slate-600";
                 reasonEl.innerText = d.reason || "No vehicle detected";
+
+                plateBox?.classList.add("hidden");
+                resumeBox?.classList.add("hidden");
+
+                manualOverride = false;
                 return;
             }
 
+            /* ===== DETECTED (ANY STATE) ===== */
             vehicleEl.innerText = d.vehicle_number || "—";
-            confidenceEl.innerText = d.confidence + "%";
+            confidenceEl.innerText = d.confidence ? d.confidence + "%" : "—";
             decisionEl.innerText = d.decision;
-            reasonEl.innerText = d.reason;
+            reasonEl.innerText = d.reason || "—";
+            violationsEl.innerText =
+                d.violations !== undefined ? d.violations : "—";
 
+            // 🔥 Always show detected box
+            plateBox?.classList.remove("hidden");
+            plateText.innerText = d.vehicle_number || "UNREADABLE";
+
+            // 🔥 ALWAYS show Next Vehicle button
+            resumeBox?.classList.remove("hidden");
+
+            /* ===== COLORS ===== */
             if (d.decision.includes("ALLOW")) {
                 decisionEl.className = "font-semibold text-green-600";
             } else if (d.decision.includes("DENY")) {
@@ -138,6 +171,38 @@ setInterval(() => {
             }
         });
 }, 2000);
+
+/* ===== MANUAL ACTION ===== */
+function manualDecision(action) {
+    manualOverride = true;
+
+    fetch("/gate/manual_decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action })
+    });
+
+    const decisionEl = document.getElementById("decision");
+    const reasonEl = document.getElementById("reason");
+
+    if (action === "ALLOW") {
+        decisionEl.innerText = "ALLOW ENTRY";
+        decisionEl.className = "font-semibold text-green-600";
+        reasonEl.innerText = "Approved by security";
+    } else {
+        decisionEl.innerText = "DENY ENTRY";
+        decisionEl.className = "font-semibold text-red-600";
+        reasonEl.innerText = "Denied by security";
+    }
+}
+
+/* ===== NEXT VEHICLE ===== */
+function resumeDetection() {
+    fetch("/gate/resume_detection", { method: "POST" })
+        .then(() => {
+            manualOverride = false;
+        });
+}
 </script>
 
 </body>

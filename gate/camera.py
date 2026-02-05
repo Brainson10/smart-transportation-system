@@ -1,10 +1,15 @@
 import cv2
 import atexit
 import numpy as np
+from collections import defaultdict
 
 from gate.anpr import run_anpr
+from gate import decision
 from gate.decision import decide, update_latest_result
 
+# =================================================
+# CAMERA INIT
+# =================================================
 cap = cv2.VideoCapture(0)
 print("Camera opened:", cap.isOpened())
 
@@ -12,21 +17,35 @@ print("Camera opened:", cap.isOpened())
 def cleanup():
     cap.release()
 
-# ===============================
-# ADVANCED SETTINGS
-# ===============================
-FRAME_SKIP = 5
+# =================================================
+# CONFIG
+# =================================================
+FRAME_SKIP = 2
 MOTION_THRESHOLD = 1500
-MIN_PLATE_AREA = 1200
+MIN_PLATE_AREA = 700
+
+# 🔥 PLATE VOTING (KEY FIX)
+PLATE_VOTES = defaultdict(int)
+VOTE_THRESHOLD = 3   # plate must appear 3 times
 
 frame_count = 0
 prev_gray = None
+last_frame = None
 
 
+# =================================================
+# FRAME GENERATOR
+# =================================================
 def generate_frames(gate=None):
-    global frame_count, prev_gray
+    global frame_count, prev_gray, last_frame, PLATE_VOTES
 
     while True:
+
+        # 🔒 HARD PAUSE AFTER FINAL DECISION
+        if decision.PAUSED_FOR_MANUAL:
+            yield _encode_frame(last_frame)
+            continue
+
         if not cap.isOpened():
             update_latest_result({
                 "decision": "WAITING",
@@ -43,26 +62,21 @@ def generate_frames(gate=None):
             })
             continue
 
+        last_frame = frame.copy()
+
+        # ================= MOTION DETECTION =================
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
 
-        # -----------------------------
-        # MOTION DETECTION
-        # -----------------------------
         motion_detected = False
         if prev_gray is not None:
             delta = cv2.absdiff(prev_gray, gray)
             thresh = cv2.threshold(delta, 25, 255, cv2.THRESH_BINARY)[1]
-            motion_score = cv2.countNonZero(thresh)
-
-            if motion_score > MOTION_THRESHOLD:
+            if cv2.countNonZero(thresh) > MOTION_THRESHOLD:
                 motion_detected = True
 
         prev_gray = gray
 
-        # -----------------------------
-        # NO MOTION → WAIT
-        # -----------------------------
         if not motion_detected:
             update_latest_result({
                 "decision": "WAITING",
@@ -71,44 +85,61 @@ def generate_frames(gate=None):
             yield _encode_frame(frame)
             continue
 
-        # -----------------------------
-        # FRAME SKIPPING
-        # -----------------------------
+        # ================= FRAME SKIP =================
         frame_count += 1
         if frame_count % FRAME_SKIP != 0:
             yield _encode_frame(frame)
             continue
 
-        # -----------------------------
-        # RUN ANPR
-        # -----------------------------
+        # ================= ANPR =================
         anpr_result = run_anpr(frame)
 
-        # Plate size filtering (if bbox exists)
         if "bbox" in anpr_result:
             x, y, w, h = anpr_result["bbox"]
             if w * h < MIN_PLATE_AREA:
+                yield _encode_frame(frame)
+                continue
+
+        raw_plate = anpr_result.get("vehicle_number")
+        plate = normalize_plate_for_vote(raw_plate)
+
+        if plate:
+            PLATE_VOTES[plate] += 1
+
+            # Pick most frequent plate
+            best_plate = max(PLATE_VOTES, key=PLATE_VOTES.get)
+
+            if PLATE_VOTES[best_plate] >= VOTE_THRESHOLD:
+                anpr_result["vehicle_number"] = best_plate
+
+                final_decision = decide(anpr_result, gate)
+                update_latest_result(final_decision)
+
+                PLATE_VOTES.clear()
+                yield _encode_frame(frame)
+                continue
+            else:
                 update_latest_result({
                     "decision": "WAITING",
-                    "reason": "Vehicle too far"
+                    "reason": "Stabilizing number plate"
                 })
                 yield _encode_frame(frame)
                 continue
 
-        final_decision = decide(anpr_result)
-        update_latest_result(final_decision)
-
+        # No valid plate this frame
         yield _encode_frame(frame)
 
 
-# ===============================
-# HELPERS
-# ===============================
+# =================================================
+# FRAME ENCODERS
+# =================================================
 def _encode_frame(frame):
     ret, buffer = cv2.imencode(".jpg", frame)
     return (
         b"--frame\r\n"
-        b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
+        b"Content-Type: image/jpeg\r\n\r\n"
+        + buffer.tobytes()
+        + b"\r\n"
     )
 
 
@@ -117,32 +148,29 @@ def _black_frame():
     ret, buffer = cv2.imencode(".jpg", black)
     return (
         b"--frame\r\n"
-        b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
+        b"Content-Type: image/jpeg\r\n\r\n"
+        + buffer.tobytes()
+        + b"\r\n"
     )
 
+import re
 
-def generate_demo_frames(video_path):
-    cap = cv2.VideoCapture(video_path)
+def normalize_plate_for_vote(text):
+    if not text:
+        return None
 
-    if not cap.isOpened():
-        print("Demo video not found")
-        return
+    t = text.upper()
+    t = re.sub(r'[^A-Z0-9]', '', t)
 
-    while True:
-        success, frame = cap.read()
+    # Fix common OCR confusions
+    t = t.replace('O', '0')
+    t = t.replace('I', '1')
+    t = t.replace('L', '1')
+    t = t.replace('Z', '2')
+    t = t.replace('B', '8')
 
-        if not success:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # 🔁 loop demo
-            continue
+    # Indian plate heuristic: last 4 digits must be numbers
+    if len(t) >= 6:
+        return t[-10:]  # keep last 10 chars
 
-        # 👉 SAME ANPR PIPELINE CAN BE CALLED HERE
-        # anpr_result = run_anpr(frame)
-        # decision = decide(anpr_result)
-
-        ret, buffer = cv2.imencode(".jpg", frame)
-        frame = buffer.tobytes()
-
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
-        )
+    return None

@@ -3,6 +3,7 @@ import pytesseract
 from pytesseract import TesseractError
 from ultralytics import YOLO
 import os
+import re
 
 # =================================================
 # LOAD YOLO MODEL (ONCE)
@@ -13,10 +14,33 @@ MODEL_PATH = os.path.join(BASE_DIR, "models", "license_plate_detector.pt")
 model = YOLO(MODEL_PATH)
 
 # =================================================
+# PLATE REGEX (INDIAN FORMAT)
+# =================================================
+PLATE_REGEX = re.compile(r"[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}")
+
+def extract_plate(text):
+    """
+    Extract valid plate from noisy OCR output
+    """
+    if not text:
+        return None
+
+    cleaned = (
+        text.upper()
+        .replace(" ", "")
+        .replace("\n", "")
+        .replace("\f", "")
+    )
+
+    match = PLATE_REGEX.search(cleaned)
+    return match.group(0) if match else None
+
+
+# =================================================
 # ANPR FUNCTION
 # =================================================
 def run_anpr(frame):
-    results = model(frame, conf=0.4, iou=0.5, verbose=False)
+    results = model(frame, conf=0.35, iou=0.5, verbose=False)
 
     for r in results:
         if r.boxes is None:
@@ -34,29 +58,51 @@ def run_anpr(frame):
             if plate is None or plate.size == 0:
                 continue
 
-            if (x2 - x1) * (y2 - y1) < 1500:
+            area = (x2 - x1) * (y2 - y1)
+            if area < 1200:
                 continue
 
+            # ================= PREPROCESS =================
             gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
-            gray = cv2.bilateralFilter(gray, 11, 17, 17)
-            _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
 
+            gray = cv2.resize(
+                gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC
+            )
+
+            gray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+            thresh = cv2.adaptiveThreshold(
+                gray,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY,
+                11,
+                2
+            )
+
+            # ================= OCR =================
             try:
                 text = pytesseract.image_to_string(
                     thresh,
-                    config="--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                ).strip()
+                    config="--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+                )
             except TesseractError:
                 continue
 
-            if not text or len(text) < 6:
+            # 🔍 DEBUG (KEEP THIS)
+            print("OCR RAW >>>", repr(text))
+
+            # ================= EXTRACT PLATE =================
+            plate_number = extract_plate(text)
+
+            if not plate_number:
                 continue
 
-            confidence = min(60 + len(text) * 5, 95)
+            confidence = min(70 + len(plate_number) * 3, 95)
 
             return {
                 "status": "PLATE_DETECTED",
-                "vehicle_number": text,
+                "vehicle_number": plate_number,
                 "confidence": confidence,
                 "bbox": (x1, y1, x2 - x1, y2 - y1)
             }

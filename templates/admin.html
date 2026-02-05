@@ -32,7 +32,7 @@
 </section>
 
 <!-- ================= TOP HIGH RISK ROADS ================= -->
-<section>
+<!-- <section>
   <h2>Top High-Risk Road Segments</h2>
 
   {% if high_risk_roads and high_risk_roads|length > 0 %}
@@ -45,6 +45,45 @@
           <div class="confidence">AI Confidence: {{ r[3] }}%</div>
         </div>
       {% endfor %}
+    </div>
+  {% else %}
+    <p>No high-risk segments detected in the latest prediction run.</p>
+  {% endif %}
+
+  <div style="margin-top: 20px;">
+    <a href="{{ url_for('manage_roads') }}" class="view-btn">
+      View All Road Risk Analysis
+    </a>
+  </div>
+</section> -->
+
+<!-- ================= TOP HIGH RISK ROADS ================= -->
+<section>
+  <h2>Top High-Risk Road Segments</h2>
+
+  {% if high_risk_roads and high_risk_roads|length > 0 %}
+    <div class="top-risk-grid">
+
+      {% for r in high_risk_roads %}
+        <div class="top-risk-card {{ r[1]|lower }}">
+
+          <h3>{{ r[0] }}</h3>
+
+          <span class="risk-pill {{ r[1]|lower }}">
+            {{ r[1] }}
+          </span>
+
+          <p class="risk-reason">
+            {{ r[2] }}
+          </p>
+
+          <div class="confidence">
+            AI Confidence: {{ r[3] }}%
+          </div>
+
+        </div>
+      {% endfor %}
+
     </div>
   {% else %}
     <p>No high-risk segments detected in the latest prediction run.</p>

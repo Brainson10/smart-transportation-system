@@ -1,0 +1,492 @@
+[2026-02-03 23:13:04]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 1. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:04]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 2. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:09]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 3. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:15]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 4. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:15]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 5. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:22]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 6. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:25]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 7. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:26]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 8. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:27]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 9. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:28]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 10. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:29]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 11. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:29]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 12. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:29]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 13. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:29]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 14. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:30]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 15. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:30]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 16. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:31]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 17. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:31]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 18. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:32]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 19. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:34]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 20. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:35]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 21. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:35]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 22. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:37]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 23. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:38]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 24. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:39]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 25. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:40]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 26. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:40]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 27. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:43]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 28. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:43]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 29. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:44]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 30. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:45]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 31. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:46]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 32. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:46]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 33. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:52]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 34. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:52]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 35. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:52]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 36. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:53]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 37. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:54]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 38. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:55]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 39. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:55]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 40. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:55]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 41. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:57]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 42. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:58]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 43. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:58]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 44. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:58]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 45. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:13:59]
+To: 9233234910
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 46. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:03]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 1. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:06]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 2. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:07]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 3. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:07]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 4. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:08]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 5. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:08]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 6. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:09]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 7. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:10]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 8. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:10]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 9. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:11]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 10. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:12]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 11. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:12]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 12. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:13]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 13. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:13]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 14. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:16]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 15. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:17]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 16. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:18]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 17. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:18]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 18. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:18]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 19. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:18]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 20. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:19]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 21. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:20]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 22. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:20]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 23. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:20]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 24. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:21]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 25. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-03 23:56:22]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 26. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:46]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 27. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:46]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 28. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:47]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 29. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:47]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 30. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:48]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 31. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:48]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 32. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:49]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 33. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:49]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 34. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:51]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 35. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:52]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 36. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:53]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 37. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:53]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 38. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:53]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 39. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:54]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 40. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:54]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 41. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:54]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 42. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:55]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 43. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:56]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 44. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:56]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 45. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:57]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 46. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:57]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 47. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:57]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 48. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:01:58]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 49. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:06]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 50. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:06]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 51. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:07]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 52. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:13]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 53. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:15]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 54. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:15]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 55. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:19]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 56. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:20]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 57. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:22]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 58. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:23]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 59. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:23]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 60. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:23]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 61. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:24]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 62. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:24]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 63. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:24]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 64. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:25]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 65. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:07:25]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 66. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:26]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 67. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:27]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 68. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:28]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 69. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:29]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 70. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:31]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 71. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:32]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 72. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:32]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 73. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:33]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 74. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:35]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 75. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:36]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 76. Further violations may lead to blocking.
+----------------------------------------
+[2026-02-04 00:22:37]
+To: 8787623927
+Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 77. Further violations may lead to blocking.
+----------------------------------------

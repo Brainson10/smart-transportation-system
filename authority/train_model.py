@@ -12,19 +12,21 @@ DB_PATH = os.path.join(BASE_DIR, "authority.db")
 MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
 
 # =================================================
-# LOAD DATA FROM SQLITE
+# LOAD DATA FROM SQLITE (CORRECT JOIN)
 # =================================================
 conn = sqlite3.connect(DB_PATH)
 
 query = """
 SELECT
-    curve,
-    junction,
-    visibility,
-    lane_width,
-    traffic_density,
-    accident_count
-FROM accident_data
+    r.curve,
+    r.junction,
+    r.visibility,
+    r.lane_width,
+    r.traffic_density,
+    COALESCE(a.accident_count, 0) AS accident_count
+FROM road_features r
+LEFT JOIN accident_data a
+ON r.segment = a.segment
 """
 
 df = pd.read_sql(query, conn)
@@ -34,18 +36,17 @@ conn.close()
 # BASIC DATA VALIDATION
 # =================================================
 if df.empty:
-    raise ValueError("No training data found in accident_data table")
+    raise ValueError("No training data found. Check road_features / accident_data")
 
 # =================================================
-# HANDLE OLD DATA (IMPORTANT FIX)
+# HANDLE OLD / MISSING DATA (SAFE)
 # =================================================
-# Older rows may not have lane_width / traffic_density
-# Fill with MEDIUM (1) as neutral default
 df["lane_width"] = df["lane_width"].fillna(1)
 df["traffic_density"] = df["traffic_density"].fillna(1)
+df["accident_count"] = df["accident_count"].fillna(0)
 
 # =================================================
-# FEATURE SELECTION (MATCH PREDICTION)
+# FEATURE SELECTION (AI-VALID)
 # =================================================
 FEATURES = [
     "curve",
@@ -76,6 +77,7 @@ model.fit(X, y)
 # =================================================
 joblib.dump(model, MODEL_PATH)
 
-print(" ML model trained successfully")
-print(" Features used:", FEATURES)
-print(f" Model saved at: {MODEL_PATH}")
+print("✅ ML model trained successfully")
+print("✅ Features used:", FEATURES)
+print("✅ Target:", TARGET)
+print(f"✅ Model saved at: {MODEL_PATH}")
