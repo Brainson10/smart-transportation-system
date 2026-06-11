@@ -1,11 +1,8 @@
-import os
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(os.path.dirname(BASE_DIR), "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
+from config import LOG_DIR, SMS_LOG_FILE
 
-SMS_LOG_FILE = os.path.join(LOG_DIR, "sms_logs.txt")
+LOG_DIR.mkdir(exist_ok=True)
 
 
 def send_sms(phone, message):

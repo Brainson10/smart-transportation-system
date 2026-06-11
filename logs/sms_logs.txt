@@ -490,3 +490,27 @@ Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violati
 To: 8787623927
 Message: ALERT: Vehicle UP19EQ1001 violated gate rules at Academic Gate. Violation count: 77. Further violations may lead to blocking.
 ----------------------------------------
+[2026-02-06 10:55:56]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 126.
+----------------------------------------
+[2026-02-06 10:58:34]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 127.
+----------------------------------------
+[2026-02-06 10:59:11]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 128.
+----------------------------------------
+[2026-02-06 11:22:08]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 129.
+----------------------------------------
+[2026-02-06 11:22:51]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 130.
+----------------------------------------
+[2026-02-06 11:26:55]
+To: 9362646029
+Message: ALERT: Your vehicle UP19EQ1001 was denied entry at academic block road due to prohibited time. Violation count: 131.
+----------------------------------------

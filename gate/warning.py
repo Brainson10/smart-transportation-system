@@ -1,9 +1,6 @@
 import sqlite3
-import os
-from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VEHICLE_DB = os.path.join(BASE_DIR, "database.db")
+from config import VEHICLE_DB
 
 def send_warning(vehicle_number, location):
     """

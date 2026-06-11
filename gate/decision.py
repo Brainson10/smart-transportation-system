@@ -1,303 +1,21 @@
-# import sqlite3
-# import os
-# import re
-# from datetime import datetime
-# from gate.sms import send_sms  
-
-# # 🔴 PAUSE FLAG
-# PAUSED_FOR_MANUAL = False
-
-
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# DB_PATH = os.path.join(BASE_DIR, "gate_security.db")
-# ADMIN_DB_PATH = os.path.join(os.path.dirname(BASE_DIR), "database.db")
-
-# NO_VEHICLE_COUNT = 0
-# PLATE_COUNT = 0
-
-# NO_VEHICLE_THRESHOLD = 5
-# PLATE_THRESHOLD = 2
-
-
-# latest_result = {
-#     "vehicle_number": None,
-#     "confidence": 0,
-#     "decision": "WAITING",
-#     "reason": "No vehicle detected"
-# }
-
-# def update_latest_result(data):
-#     global latest_result
-#     latest_result = data
-
-# def get_latest_result():
-#     return latest_result
-
-
-# def normalize_vehicle_number(raw):
-#     if not raw:
-#         return None
-#     cleaned = re.sub(r"[^A-Z0-9]", "", raw.upper())
-#     return cleaned if len(cleaned) == 10 else None
-
-
-# def check_vehicle_db(vehicle_number):
-#     conn = sqlite3.connect(ADMIN_DB_PATH)
-#     cur = conn.cursor()
-
-#     cur.execute("""
-#         SELECT role, status
-#         FROM vehicles
-#         WHERE REPLACE(number,' ','') = ?
-#     """, (vehicle_number,))
-#     row = cur.fetchone()
-#     conn.close()
-
-#     if not row:
-#         return None, None, "DENY ENTRY", "Unregistered vehicle"
-
-#     role, status = row
-#     if status != "ACTIVE":
-#         return role, status, "DENY ENTRY", "Blocked vehicle"
-
-#     return role, status, "ALLOW ENTRY", "Registered vehicle"
-
-
-# def is_prohibited_time(location_name):
-#     conn = sqlite3.connect(ADMIN_DB_PATH)
-#     cur = conn.cursor()
-
-#     cur.execute("""
-#         SELECT prohibited_start, prohibited_end
-#         FROM locations
-#         WHERE name = ?
-#     """, (location_name,))
-#     row = cur.fetchone()
-#     conn.close()
-
-#     if not row:
-#         return False
-
-#     start, end = row
-#     now = datetime.now().time()
-
-#     start_time = datetime.strptime(start, "%H:%M").time()
-#     end_time = datetime.strptime(end, "%H:%M").time()
-
-#     if start_time < end_time:
-#         return start_time <= now <= end_time
-#     return now >= start_time or now <= end_time
-
-
-# def decide(anpr_result, gate_location):
-#     global NO_VEHICLE_COUNT, PLATE_COUNT, PAUSED_FOR_MANUAL
-
-#     # ⛔ HARD STOP IF PAUSED
-#     if PAUSED_FOR_MANUAL:
-#         return get_latest_result()
-
-#     # -------- NO VEHICLE --------
-#     if anpr_result.get("status") == "NO_VEHICLE":
-#         NO_VEHICLE_COUNT += 1
-#         PLATE_COUNT = 0
-
-#         if NO_VEHICLE_COUNT >= NO_VEHICLE_THRESHOLD:
-#             result = {
-#                 "vehicle_number": None,
-#                 "confidence": 0,
-#                 "decision": "WAITING",
-#                 "reason": "No vehicle detected"
-#             }
-#             update_latest_result(result)
-#             return result
-
-#         return get_latest_result()
-
-#     # -------- VEHICLE APPROACHING --------
-#     PLATE_COUNT += 1
-#     NO_VEHICLE_COUNT = 0
-
-#     if PLATE_COUNT < PLATE_THRESHOLD:
-#         result = {
-#             "vehicle_number": None,
-#             "confidence": 0,
-#             "decision": "WAITING",
-#             "reason": "Vehicle approaching"
-#         }
-#         update_latest_result(result)
-#         return result
-
-#     # -------- NORMALIZE --------
-#     vehicle_number = normalize_vehicle_number(
-#         anpr_result.get("vehicle_number")
-#     )
-
-#     # -------- INVALID FORMAT → MANUAL --------
-#     if not vehicle_number:
-#         result = {
-#             "vehicle_number": None,
-#             "confidence": anpr_result.get("confidence", 0),
-#             "decision": "MANUAL CHECK",
-#             "reason": "Invalid plate format"
-#         }
-
-#         PAUSED_FOR_MANUAL = True  # 🔒 HOLD SYSTEM
-#         update_latest_result(result)
-#         return result
-
-#     # -------- LOW CONFIDENCE → MANUAL --------
-#     if anpr_result.get("confidence", 0) < 80:
-#         result = {
-#             "vehicle_number": vehicle_number,
-#             "confidence": anpr_result.get("confidence"),
-#             "decision": "MANUAL CHECK",
-#             "reason": "Low OCR confidence"
-#         }
-
-#         PAUSED_FOR_MANUAL = True  # 🔒 HOLD SYSTEM
-#         update_latest_result(result)
-#         return result
-
-#     # -------- ADMIN CHECK --------
-#     role, status, decision, reason = check_vehicle_db(vehicle_number)
-
-#     # -------- PROHIBITED TIME --------
-#     if decision == "ALLOW ENTRY" and is_prohibited_time(gate_location):
-#         if role not in ["staff", "emergency"]:
-#             conn = sqlite3.connect(ADMIN_DB_PATH)
-#             cur = conn.cursor()
-
-#             cur.execute("""
-#                 INSERT INTO violations (vehicle_number, location, violation_type)
-#                 VALUES (?, ?, ?)
-#             """, (vehicle_number, gate_location, "Prohibited time entry"))
-
-#             cur.execute("""
-#                 UPDATE vehicles
-#                 SET violation_count = violation_count + 1
-#                 WHERE REPLACE(number,' ','') = ?
-#             """, (vehicle_number,))
-
-#             cur.execute("""
-#                 UPDATE locations
-#                 SET violation_count = violation_count + 1
-#                 WHERE name = ?
-#             """, (gate_location,))
-
-#             cur.execute("""
-#                 SELECT phone, violation_count
-#                 FROM vehicles
-#                 WHERE REPLACE(number,' ','') = ?
-#             """, (vehicle_number,))
-#             phone, count = cur.fetchone()
-
-#             conn.commit()
-#             conn.close()
-
-#             if phone:
-#                 send_sms(
-#                     phone,
-#                     f"ALERT: Vehicle {vehicle_number} violated gate rules at {gate_location}. "
-#                     f"Violation count: {count}. Further violations may lead to blocking."
-#                 )
-
-#             result = {
-#                 "vehicle_number": vehicle_number,
-#                 "confidence": anpr_result.get("confidence"),
-#                 "decision": "DENY ENTRY",
-#                 "reason": "Prohibited time violation"
-#             }
-
-#             PAUSED_FOR_MANUAL = True  # 🔒 HOLD SYSTEM
-#             update_latest_result(result)
-#             return result
-
-#     # -------- FINAL DECISION (ALLOW / DENY) --------
-#     violation_count = get_violation_count(vehicle_number)
-
-#     result = {
-#         "vehicle_number": vehicle_number,
-#         "confidence": anpr_result.get("confidence"),
-#         "decision": decision,
-#         "reason": reason,
-#         "violations": violation_count   # 🔥 ADD THIS
-#     }
-
-#     PAUSED_FOR_MANUAL = True  # 🔒 HOLD SYSTEM
-#     update_latest_result(result)
-#     return result
-
-# def get_violation_count(vehicle_number):
-#     conn = sqlite3.connect(ADMIN_DB_PATH)
-#     cur = conn.cursor()
-
-#     cur.execute("""
-#         SELECT violation_count
-#         FROM vehicles
-#         WHERE REPLACE(number,' ','') = ?
-#     """, (vehicle_number,))
-
-#     row = cur.fetchone()
-#     conn.close()
-
-#     return row[0] if row else 0
-
-# from flask import Blueprint, jsonify
-
-# gate_bp = Blueprint("gate", __name__)
-
-# # 🔥 already exists
-# PAUSED_FOR_MANUAL = False
-
-
-# @gate_bp.route("/gate/resume_detection", methods=["POST"])
-# def resume_detection():
-#     global PAUSED_FOR_MANUAL, NO_VEHICLE_COUNT, PLATE_COUNT
-
-#     PAUSED_FOR_MANUAL = False
-#     NO_VEHICLE_COUNT = 0
-#     PLATE_COUNT = 0
-
-#     update_latest_result({
-#         "vehicle_number": None,
-#         "confidence": 0,
-#         "decision": "WAITING",
-#         "reason": "Ready for next vehicle"
-#     })
-
-#     return jsonify({"status": "resumed"})
-
 import sqlite3
-import os
-import re
 from datetime import datetime
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
+from config import VEHICLE_DB
 from gate.sms import send_sms
 
 # =================================================
-# 🔴 PAUSE FLAG (ONLY ONE)
+# 🔴 PAUSE FLAG (ONLY ONE SOURCE OF TRUTH)
 # =================================================
 PAUSED_FOR_MANUAL = False
 
 # =================================================
 # PATH CONFIG
 # =================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "gate_security.db")
-ADMIN_DB_PATH = os.path.join(os.path.dirname(BASE_DIR), "database.db")
+ADMIN_DB_PATH = VEHICLE_DB
 
 # =================================================
-# FRAME STABILITY CONFIG
-# =================================================
-NO_VEHICLE_COUNT = 0
-PLATE_COUNT = 0
-
-NO_VEHICLE_THRESHOLD = 5
-PLATE_THRESHOLD = 2
-
-# =================================================
-# LATEST RESULT
+# LATEST RESULT (UI STATE)
 # =================================================
 latest_result = {
     "vehicle_number": None,
@@ -315,42 +33,25 @@ def get_latest_result():
     return latest_result
 
 # =================================================
-# NORMALIZE VEHICLE NUMBER
-# =================================================
-def normalize_vehicle_number(raw):
-    if not raw:
-        return None
-    cleaned = re.sub(r"[^A-Z0-9]", "", raw.upper())
-    return cleaned if len(cleaned) == 10 else None
-
-# =================================================
-# GET VIOLATION COUNT
+# DB HELPERS
 # =================================================
 def get_violation_count(vehicle_number):
     conn = sqlite3.connect(ADMIN_DB_PATH)
     cur = conn.cursor()
-
     cur.execute("""
-        SELECT violation_count
-        FROM vehicles
+        SELECT violation_count FROM vehicles
         WHERE REPLACE(number,' ','') = ?
     """, (vehicle_number,))
-
     row = cur.fetchone()
     conn.close()
-
     return row[0] if row else 0
 
-# =================================================
-# CHECK VEHICLE DB
-# =================================================
+
 def check_vehicle_db(vehicle_number):
     conn = sqlite3.connect(ADMIN_DB_PATH)
     cur = conn.cursor()
-
     cur.execute("""
-        SELECT role, status
-        FROM vehicles
+        SELECT role, status FROM vehicles
         WHERE REPLACE(number,' ','') = ?
     """, (vehicle_number,))
     row = cur.fetchone()
@@ -365,231 +66,250 @@ def check_vehicle_db(vehicle_number):
 
     return role, status, "ALLOW ENTRY", "Registered vehicle"
 
-# =================================================
-# PROHIBITED TIME CHECK
-# =================================================
-# def is_prohibited_time(location_name):
-#     conn = sqlite3.connect(ADMIN_DB_PATH)
-#     cur = conn.cursor()
-
-#     cur.execute("""
-#         SELECT prohibited_start, prohibited_end
-#         FROM locations
-#         WHERE name = ?
-#     """, (location_name,))
-#     row = cur.fetchone()
-#     conn.close()
-
-#     if not row:
-#         return False
-
-#     start, end = row
-#     now = datetime.now().time()
-
-#     start_time = datetime.strptime(start, "%H:%M").time()
-#     end_time = datetime.strptime(end, "%H:%M").time()
-
-#     if start_time < end_time:
-#         return start_time <= now <= end_time
-#     return now >= start_time or now <= end_time
-
 def is_prohibited_time(location_name):
     import sqlite3
-    import os
     from datetime import datetime
 
-    # 🔹 authority.db path
-    AUTHORITY_DB_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "authority.db"
-    )
+    # STEP A: normalize location
+    location_name = location_name.lower().replace(" gate", "").strip()
+    print("STEP 3 ▶ normalized location_name:", location_name)
 
-    conn = sqlite3.connect(AUTHORITY_DB_PATH)
+    row = None  # ✅ CRITICAL FIX: define row upfront
+
+    try:
+        conn = sqlite3.connect(ADMIN_DB_PATH)
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT prohibited_start, prohibited_end
+            FROM locations
+            WHERE LOWER(name) = ?
+        """, (location_name,))
+
+        row = cur.fetchone()
+        conn.close()
+
+        print("STEP 4 ▶ DB row fetched:", row)
+
+        # No prohibited time set
+        if not row or not row[0] or not row[1]:
+            return False
+
+        start, end = row
+
+        now = datetime.now().time()
+        start_time = datetime.strptime(start, "%H:%M").time()
+        end_time = datetime.strptime(end, "%H:%M").time()
+
+        print("STEP 5 ▶ now:", now)
+        print("STEP 5 ▶ start:", start_time, "end:", end_time)
+
+        # Same-day window
+        if start_time < end_time:
+            return start_time <= now <= end_time
+
+        # Cross-midnight window
+        return now >= start_time or now <= end_time
+
+    except Exception as e:
+        print("PROHIBITED TIME CHECK ERROR:", e)
+        print("DEBUG ▶ row value at error:", row)
+        return False
+    
+def send_violation_sms_internal(vehicle_number, location):
+    conn = sqlite3.connect(ADMIN_DB_PATH)
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT prohibited_start, prohibited_end
-        FROM predictions
-        WHERE segment = ?
-    """, (location_name,))
+        SELECT phone
+        FROM vehicles
+        WHERE number = ?
+    """, (vehicle_number,))
 
     row = cur.fetchone()
     conn.close()
 
-    # ❌ No prohibited time defined
-    if not row or not row[0] or not row[1]:
-        return False
+    if not row or not row[0]:
+        print("⚠️ No phone number registered")
+        return
 
-    start, end = row
-    now = datetime.now().time()
+    phone = row[0]
 
-    start_time = datetime.strptime(start, "%H:%M").time()
-    end_time = datetime.strptime(end, "%H:%M").time()
+    message = (
+        f"ALERT: Your vehicle {vehicle_number} was denied entry at {location} "
+        f"due to prohibited time access. Repeated violations may lead to blocking."
+    )
 
-    # ✅ Normal time range (e.g. 22:00 → 06:00)
-    if start_time < end_time:
-        return start_time <= now <= end_time
+    send_sms(phone, message)
 
-    # ✅ Overnight range (e.g. 22:00 → 06:00)
-    return now >= start_time or now <= end_time
 # =================================================
-# DECISION ENGINE
+# DECISION ENGINE (FINAL & CLEAN)
 # =================================================
 def decide(anpr_result, gate_location):
-    global NO_VEHICLE_COUNT, PLATE_COUNT, PAUSED_FOR_MANUAL
+    global PAUSED_FOR_MANUAL
 
-    # ⛔ HARD STOP IF PAUSED
+    # ⛔ If already paused, do nothing
     if PAUSED_FOR_MANUAL:
         return get_latest_result()
 
-    # -------- NO VEHICLE --------
-    if anpr_result.get("status") == "NO_VEHICLE":
-        NO_VEHICLE_COUNT += 1
-        PLATE_COUNT = 0
+    # Normalize gate location
+    gate_location = gate_location.lower().strip()
 
-        if NO_VEHICLE_COUNT >= NO_VEHICLE_THRESHOLD:
-            result = {
-                "vehicle_number": None,
-                "confidence": 0,
-                "decision": "WAITING",
-                "reason": "No vehicle detected",
-                "violations": 0
-            }
-            update_latest_result(result)
-            return result
+    vehicle_number = anpr_result.get("vehicle_number")
+    confidence = anpr_result.get("confidence", 0)
 
-        return get_latest_result()
-
-    # -------- VEHICLE APPROACHING --------
-    PLATE_COUNT += 1
-    NO_VEHICLE_COUNT = 0
-
-    if PLATE_COUNT < PLATE_THRESHOLD:
-        result = {
-            "vehicle_number": None,
-            "confidence": 0,
-            "decision": "WAITING",
-            "reason": "Vehicle approaching",
-            "violations": 0
-        }
-        update_latest_result(result)
-        return result
-
-    # -------- NORMALIZE --------
-    vehicle_number = normalize_vehicle_number(
-        anpr_result.get("vehicle_number")
-    )
-
-    # -------- INVALID FORMAT → MANUAL --------
+    # =============================
+    # SAFETY: NO PLATE
+    # =============================
     if not vehicle_number:
         result = {
             "vehicle_number": None,
-            "confidence": anpr_result.get("confidence", 0),
+            "confidence": confidence,
             "decision": "MANUAL CHECK",
-            "reason": "Invalid plate format",
+            "reason": "No valid plate",
             "violations": 0
         }
-
         PAUSED_FOR_MANUAL = True
         update_latest_result(result)
         return result
 
-    # -------- LOW CONFIDENCE → MANUAL --------
-    if anpr_result.get("confidence", 0) < 80:
+    # =============================
+    # LOW CONFIDENCE
+    # =============================
+    if confidence < 80:
         result = {
             "vehicle_number": vehicle_number,
-            "confidence": anpr_result.get("confidence"),
+            "confidence": confidence,
             "decision": "MANUAL CHECK",
             "reason": "Low OCR confidence",
             "violations": get_violation_count(vehicle_number)
         }
-
         PAUSED_FOR_MANUAL = True
         update_latest_result(result)
         return result
 
-    # -------- ADMIN CHECK --------
+    # =============================
+    # ADMIN / VEHICLE CHECK
+    # =============================
     role, status, decision, reason = check_vehicle_db(vehicle_number)
+    role = role.lower().strip() if role else ""
 
-    # -------- PROHIBITED TIME --------
+    # =============================
+    # PROHIBITED TIME (AUTO DENY + SMS)
+    # =============================
+    print("STEP 1 ▶ gate_location received:", gate_location)
     if decision == "ALLOW ENTRY" and is_prohibited_time(gate_location):
-        if role not in ["staff", "emergency"]:
+
+        
+        if True:
+
             conn = sqlite3.connect(ADMIN_DB_PATH)
             cur = conn.cursor()
 
+            # Insert violation
             cur.execute("""
-                INSERT INTO violations (vehicle_number, location, violation_type)
-                VALUES (?, ?, ?)
+                INSERT INTO violations (vehicle_number, location, violation_type, timestamp)
+                VALUES (?, ?, ?, datetime('now'))
             """, (vehicle_number, gate_location, "Prohibited time entry"))
 
+            # Update vehicle violation count
             cur.execute("""
                 UPDATE vehicles
                 SET violation_count = violation_count + 1
                 WHERE REPLACE(number,' ','') = ?
             """, (vehicle_number,))
 
-            cur.execute("""
-                UPDATE locations
-                SET violation_count = violation_count + 1
-                WHERE name = ?
-            """, (gate_location,))
-
+            # Fetch phone + updated count
             cur.execute("""
                 SELECT phone, violation_count
                 FROM vehicles
                 WHERE REPLACE(number,' ','') = ?
             """, (vehicle_number,))
-            phone, count = cur.fetchone()
+            row = cur.fetchone()
 
             conn.commit()
             conn.close()
 
+            phone = row[0] if row else None
+            count = row[1] if row else get_violation_count(vehicle_number)
+
+            # Send SMS if registered
+            sms_sent = False
+
             if phone:
                 send_sms(
                     phone,
-                    f"ALERT: Vehicle {vehicle_number} violated gate rules at {gate_location}. "
+                    f"ALERT: Your vehicle {vehicle_number} was denied entry at "
+                    f"{gate_location} due to prohibited time. "
                     f"Violation count: {count}."
                 )
+                sms_sent = True
 
             result = {
                 "vehicle_number": vehicle_number,
-                "confidence": anpr_result.get("confidence"),
+                "confidence": confidence,
                 "decision": "DENY ENTRY",
                 "reason": "Prohibited time violation",
-                "violations": count
+                "violations": count,
+                "sms_sent": sms_sent
             }
 
             PAUSED_FOR_MANUAL = True
             update_latest_result(result)
             return result
 
-    # -------- FINAL DECISION --------
-    violation_count = get_violation_count(vehicle_number)
+    # # =============================
+    # # FINAL NORMAL DECISION
+    # # =============================
+    # result = {
+    #     "vehicle_number": vehicle_number,
+    #     "confidence": confidence,
+    #     "decision": decision,
+    #     "reason": reason,
+    #     "violations": get_violation_count(vehicle_number)
+    # }
 
+    # # ❗ IMPORTANT FIX:
+    # # Only pause for DENY or MANUAL, NOT ALLOW
+    # if decision != "ALLOW ENTRY":
+    #     PAUSED_FOR_MANUAL = True
+
+    # update_latest_result(result)
+    # return result
+     # =============================
+    # FINAL DECISION (FREEZE FOR ALL)
+    # =============================
     result = {
         "vehicle_number": vehicle_number,
-        "confidence": anpr_result.get("confidence"),
+        "confidence": confidence,
         "decision": decision,
         "reason": reason,
-        "violations": violation_count
+        "violations": get_violation_count(vehicle_number)
     }
 
+    # ✅ FREEZE SYSTEM FOR EVERY VEHICLE (ALLOW / DENY / MANUAL)
     PAUSED_FOR_MANUAL = True
+
     update_latest_result(result)
     return result
+
 
 # =================================================
 # GATE CONTROL API
 # =================================================
 gate_bp = Blueprint("gate", __name__)
 
-@gate_bp.route("/gate/resume_detection", methods=["POST"])
+@gate_bp.route("/resume_detection", methods=["POST"])
 def resume_detection():
-    global PAUSED_FOR_MANUAL, NO_VEHICLE_COUNT, PLATE_COUNT
+    global PAUSED_FOR_MANUAL
+    from gate.camera import PLATE_VOTES, frame_count, prev_gray
 
     PAUSED_FOR_MANUAL = False
-    NO_VEHICLE_COUNT = 0
-    PLATE_COUNT = 0
+
+    # 🔥 FULL RESET
+    PLATE_VOTES.clear()
+    frame_count = 0
+    prev_gray = None
 
     update_latest_result({
         "vehicle_number": None,
@@ -600,3 +320,46 @@ def resume_detection():
     })
 
     return jsonify({"status": "resumed"})
+
+
+@gate_bp.route("/latest_result")
+def latest_result_api():
+    return jsonify(get_latest_result())
+
+@gate_bp.route("/send_violation_sms", methods=["POST"])
+def send_violation_sms():
+    data = get_latest_result()
+
+    vehicle_number = data.get("vehicle_number")
+    if not vehicle_number:
+        return jsonify({"status": "error", "message": "No vehicle detected"}), 400
+
+    conn = sqlite3.connect(ADMIN_DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT phone, violation_count
+        FROM vehicles
+        WHERE REPLACE(number,' ','') = ?
+    """, (vehicle_number,))
+
+    row = cur.fetchone()
+    conn.close()
+
+    if not row or not row[0]:
+        return jsonify({"status": "error", "message": "Phone number not found"}), 404
+
+    phone, count = row
+
+    # 📩 SEND SMS
+    send_sms(
+        phone,
+        f"ALERT: Your vehicle {vehicle_number} violated gate rules.\n"
+        f"Violation count: {count}.\n"
+        f"Please contact security if needed."
+    )
+
+    return jsonify({
+        "status": "ok",
+        "message": f"SMS sent to {phone}"
+    })

@@ -1,6 +1,9 @@
 import sqlite3
 
-conn = sqlite3.connect("gate/gate_security.db")
+from config import GATE_DB
+
+
+conn = sqlite3.connect(GATE_DB)
 cur = conn.cursor()
 
 cur.execute("""

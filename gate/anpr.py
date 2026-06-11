@@ -81,15 +81,22 @@ def run_anpr(frame):
             )
 
             # ================= OCR =================
-            try:
-                text = pytesseract.image_to_string(
-                    thresh,
-                    config="--psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                )
-            except TesseractError:
+            plate_img = frame[y1:y2, x1:x2]
+
+            if plate_img is None or plate_img.size == 0:
                 continue
 
-            # 🔍 DEBUG (KEEP THIS)
+            h, w, _ = plate_img.shape
+            if w * h < 2000:
+                continue
+
+            gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
+            gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            gray = cv2.bilateralFilter(gray, 11, 17, 17)
+
+            custom_config = r"--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            text = pytesseract.image_to_string(gray, config=custom_config)
+
             print("OCR RAW >>>", repr(text))
 
             # ================= EXTRACT PLATE =================

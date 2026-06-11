@@ -1,6 +1,8 @@
 import sqlite3
 
-DB = "authority/authority.db"
+from config import AUTHORITY_DB
+
+DB = AUTHORITY_DB
 
 def fetch_data():
     conn = sqlite3.connect(DB)

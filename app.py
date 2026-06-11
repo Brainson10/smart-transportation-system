@@ -1,15 +1,18 @@
 
-from flask import Flask, render_template, redirect, url_for, request, Response, jsonify
 import sqlite3
-import os
 from datetime import date
+from datetime import datetime
 
-from authority.predict import predict_single_road, run_predictions
+from flask import Flask, render_template, redirect, url_for, request, Response
+from flask import session
+
+from authority.predict import run_predictions
+from backend.routes.admin_routes import admin_bp
+from config import AUTHORITY_DB, STATIC_DIR, TEMPLATE_DIR, VEHICLE_DB
 from gate.gate_db import init_gate_db
 from gate.camera import generate_frames
-from gate.decision import get_latest_result
 from gate import decision   # DO NOT REMOVE
-from datetime import datetime
+from gate.decision import gate_bp
 
 def to_12hr(time_str):
     if not time_str:
@@ -19,11 +22,6 @@ def to_12hr(time_str):
 # =================================================
 # PATH CONFIG
 # =================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-VEHICLE_DB = os.path.join(BASE_DIR, "database.db")
-AUTHORITY_DB = os.path.join(BASE_DIR, "authority", "authority.db")
-GATE_DB = os.path.join(BASE_DIR, "gate", "gate_security.db")
 ADMIN_DB_PATH = VEHICLE_DB
 
 # =================================================
@@ -42,8 +40,16 @@ def get_authority_db():
 # =================================================
 # FLASK APP
 # =================================================
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=str(TEMPLATE_DIR),
+    static_folder=str(STATIC_DIR),
+)
 app.secret_key = "gate-secret"
+
+app.register_blueprint(admin_bp)
+
+app.register_blueprint(gate_bp, url_prefix="/gate")
 
 init_gate_db()
 
@@ -59,18 +65,25 @@ def home():
 # =================================================
 @app.route("/admin")
 def admin_dashboard():
+
+    # 🔐 ADMIN LOGIN PROTECTION (MANDATORY)
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("admin.admin_login"))
+
     # =============================
     # VEHICLE + VIOLATIONS DB
     # =============================
     veh = get_vehicle_db()
     vcur = veh.cursor()
 
+    # Vehicle stats
     vcur.execute("SELECT COUNT(*) FROM vehicles")
     total_vehicles = vcur.fetchone()[0]
 
     vcur.execute("SELECT COUNT(*) FROM vehicles WHERE status='ACTIVE'")
     active_vehicles = vcur.fetchone()[0]
 
+    # Today's violations
     today = date.today().isoformat()
     vcur.execute("""
         SELECT vehicle_number, location, violation_type, timestamp
@@ -80,22 +93,13 @@ def admin_dashboard():
     """, (today,))
     today_violations = vcur.fetchall()
 
-    # violation count per road
+    # Violation count per road
     vcur.execute("""
         SELECT location, COUNT(*)
         FROM violations
         GROUP BY location
     """)
     violation_map = {row[0]: row[1] for row in vcur.fetchall()}
-
-    # prohibited time per road
-    vcur.execute("""
-        SELECT name, prohibited_start, prohibited_end
-        FROM locations
-    """)
-    prohibited_map = {
-        row[0]: (row[1], row[2]) for row in vcur.fetchall()
-    }
 
     veh.close()
 
@@ -114,6 +118,7 @@ def admin_dashboard():
     acur.execute("SELECT COUNT(*) FROM predictions")
     alerts = acur.fetchone()[0]
 
+    # Top 3 high-risk roads
     acur.execute("""
         SELECT segment, predicted_risk, explanation, confidence
         FROM predictions
@@ -128,6 +133,7 @@ def admin_dashboard():
     """)
     high_risk_roads = acur.fetchall()
 
+    # All AI road segments
     acur.execute("SELECT segment FROM predictions")
     segments = acur.fetchall()
 
@@ -136,22 +142,12 @@ def admin_dashboard():
     # =============================
     # LOCATION OVERVIEW (MERGED)
     # =============================
-    # locations = []
-
-    # for (road,) in segments:
-    #     violations = violation_map.get(road, 0)
-    #     start, end = prohibited_map.get(road, (None, None))
-    #     locations.append((road, violations, start, end))
-    # =============================
-    # LOCATION OVERVIEW (MERGED)
-    # =============================
     location_overview = []
 
     veh = get_vehicle_db()
     vcur = veh.cursor()
 
-    for seg in segments:
-        road = seg[0]
+    for (road,) in segments:
         count = violation_map.get(road, 0)
 
         vcur.execute("""
@@ -168,56 +164,24 @@ def admin_dashboard():
 
     veh.close()
 
+    # =============================
+    # RENDER DASHBOARD
+    # =============================
     return render_template(
-    "admin.html",
-    total_vehicles=total_vehicles,
-    active_vehicles=active_vehicles,
-    total_cameras=total_cameras,
-    online_cameras=online_cameras,
-    alerts=alerts,
-    high_risk_roads=high_risk_roads,
-    today_violations=today_violations,
-    locations=location_overview   #  FIXED
-)
+        "admin.html",
+        total_vehicles=total_vehicles,
+        active_vehicles=active_vehicles,
+        total_cameras=total_cameras,
+        online_cameras=online_cameras,
+        alerts=alerts,
+        high_risk_roads=high_risk_roads,
+        today_violations=today_violations,
+        locations=location_overview
+    )
     
 
 # =================================================
 # ADD ROAD (AI INPUT)
-# =================================================
-@app.route("/admin/roads/add", methods=["GET", "POST"])
-def add_road():
-    if request.method == "POST":
-        segment = request.form["segment"]
-        curve = int(request.form["curve"])
-        junction = int(request.form["junction"])
-        visibility = int(request.form["visibility"])
-        lane_width = int(request.form["lane_width"])
-        traffic_density = int(request.form["traffic_density"])
-
-        predicted_risk, confidence, explanation = predict_single_road(
-            curve, junction, visibility, lane_width, traffic_density
-        )
-
-        conn = get_authority_db()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO predictions
-            (segment, predicted_risk, explanation, confidence,
-             curve, junction, visibility, lane_width, traffic_density, accident_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-        """, (
-            segment, predicted_risk, explanation, confidence,
-            curve, junction, visibility, lane_width, traffic_density
-        ))
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for("manage_roads"))
-
-    return render_template("add_road.html")
-
-# =================================================
-# MANAGE ROADS (EXPLAINABLE AI)
 # =================================================
 @app.route("/admin/roads")
 def manage_roads():
@@ -231,15 +195,15 @@ def manage_roads():
             p.explanation        AS explanation,
             p.confidence         AS confidence,
 
-            a.accident_count     AS accident_count,
-            a.curve              AS curve,
-            a.junction           AS junction,
-            a.visibility         AS visibility,
-            a.lane_width         AS lane_width,
-            a.traffic_density    AS traffic_density
+            COALESCE(a.accident_count, 0)  AS accident_count,
+            COALESCE(a.curve, 0)            AS curve,
+            COALESCE(a.junction, 0)         AS junction,
+            COALESCE(a.visibility, 0)       AS visibility,
+            COALESCE(a.lane_width, 0)       AS lane_width,
+            COALESCE(a.traffic_density, 0)  AS traffic_density
 
         FROM predictions p
-        JOIN accident_data a
+        LEFT JOIN accident_data a
             ON p.segment = a.segment
 
         ORDER BY
@@ -248,13 +212,15 @@ def manage_roads():
                 WHEN 'MEDIUM' THEN 2
                 WHEN 'LOW' THEN 1
             END DESC,
-            a.accident_count DESC
+            accident_count DESC
     """)
 
     roads = cur.fetchall()
     conn.close()
 
     return render_template("roads.html", roads=roads)
+
+
 
 # =================================================
 # PROHIBITED TIME
@@ -293,6 +259,10 @@ def edit_prohibited_time(segment):
 
     conn.close()
     return render_template("edit_prohibited_time.html", road=road)
+
+@app.route("/admin/roads/add", methods=["GET", "POST"])
+def add_road():
+    return render_template("add_road.html")
 
 @app.route("/admin/location/add", methods=["GET", "POST"])
 def add_location():
@@ -445,28 +415,26 @@ def gate_login():
     conn.close()
 
     if request.method == "POST":
-        gate = sqlite3.connect(GATE_DB)
-        cur = gate.cursor()
-        cur.execute("""
-            SELECT * FROM gates WHERE location=? AND password=?
-        """, (request.form["location"], request.form["password"]))
-        row = cur.fetchone()
-        gate.close()
+        # ✅ MASTER GATE PASSWORD
+        MASTER_GATE_PASSWORD = "gate123"  # you can change this
 
-        if row:
-            return redirect(url_for("gate_dashboard", gate=request.form["location"]))
+        if request.form["password"] != MASTER_GATE_PASSWORD:
+            return render_template(
+                "gate_login.html",
+                locations=locations,
+                error="Invalid gate password"
+            )
 
-        return render_template("gate_login.html", locations=locations, error="Invalid password")
+        # ✅ LOGIN SUCCESS → ANY GATE
+        return redirect(
+            url_for("gate_dashboard", gate=request.form["location"])
+        )
 
     return render_template("gate_login.html", locations=locations)
 
 @app.route("/gate/dashboard/<gate>")
 def gate_dashboard(gate):
     return render_template("gate_dashboard.html", gate=gate)
-
-@app.route("/gate/latest_result")
-def gate_latest_result():
-    return jsonify(get_latest_result())
 
 @app.route("/video_feed/<gate>")
 def video_feed(gate):

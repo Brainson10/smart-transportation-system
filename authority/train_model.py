@@ -2,14 +2,14 @@ import sqlite3
 import pandas as pd
 from sklearn.tree import DecisionTreeRegressor
 import joblib
-import os
+
+from config import AUTHORITY_DB, AUTHORITY_MODEL
 
 # =================================================
 # PATH CONFIG
 # =================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "authority.db")
-MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+DB_PATH = AUTHORITY_DB
+MODEL_PATH = AUTHORITY_MODEL
 
 # =================================================
 # LOAD DATA FROM SQLITE (CORRECT JOIN)
