@@ -17,7 +17,7 @@
     <p>Registered campus vehicles and access control</p>
 
     <div class="header-actions">
-      <a href="{{ url_for('register') }}" class="btn primary">
+      <a href="{{ url_for('vehicle.register') }}" class="btn primary">
         Register Vehicle
       </a>
 
@@ -60,7 +60,7 @@
         <div class="vehicle-actions">
 
           <!-- DELETE -->
-          <a href="{{ url_for('delete_vehicle', vehicle_id=v.id) }}"
+          <a href="{{ url_for('vehicle.delete_vehicle', vehicle_id=v.id) }}"
              class="btn danger small"
              onclick="return confirm('Delete this vehicle?');">
             Delete

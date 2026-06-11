@@ -8,6 +8,10 @@ from flask import session
 
 from authority.predict import run_predictions
 from backend.routes.admin_routes import admin_bp
+from backend.routes.camera_management_routes import camera_management_bp
+from backend.routes.gate_routes import gate_routes_bp
+from backend.routes.vehicle_routes import vehicle_bp
+from backend.routes.violation_routes import violation_bp
 from config import AUTHORITY_DB, STATIC_DIR, TEMPLATE_DIR, VEHICLE_DB
 from gate.gate_db import init_gate_db
 from gate.camera import generate_frames
@@ -48,6 +52,10 @@ app = Flask(
 app.secret_key = "gate-secret"
 
 app.register_blueprint(admin_bp)
+app.register_blueprint(camera_management_bp)
+app.register_blueprint(gate_routes_bp)
+app.register_blueprint(vehicle_bp)
+app.register_blueprint(violation_bp)
 
 app.register_blueprint(gate_bp, url_prefix="/gate")
 
@@ -282,21 +290,6 @@ def add_location():
 
     return render_template("add_location.html")
 
-@app.route("/admin/violations")
-def view_violations():
-    conn = get_vehicle_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT vehicle_number, location, violation_type, timestamp
-        FROM violations
-        ORDER BY timestamp DESC
-    """)
-    violations = cur.fetchall()
-    conn.close()
-
-    return render_template("violations.html", violations=violations)
-
 # =================================================
 # RUN AI
 # =================================================
@@ -304,137 +297,6 @@ def view_violations():
 def run_ai():
     run_predictions()
     return redirect(url_for("admin_dashboard"))
-
-# =================================================
-# VEHICLES
-# =================================================
-@app.route("/admin/vehicles")
-def manage_vehicles():
-    conn = get_vehicle_db()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id, number, owner, phone, type, role, violation_count, status
-        FROM vehicles
-    """)
-    vehicles = cur.fetchall()
-    conn.close()
-    return render_template("vehicles.html", vehicles=vehicles)
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        conn = get_vehicle_db()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO vehicles
-            (number, owner, phone, type, role, status, violation_count)
-            VALUES (?, ?, ?, ?, ?, 'ACTIVE', 0)
-        """, (
-            request.form["number"],
-            request.form["owner"],
-            request.form["phone"],
-            request.form["type"],
-            request.form["role"],
-        ))
-        conn.commit()
-        conn.close()
-        return redirect(url_for("manage_vehicles"))
-
-    return render_template("register_vehicle.html")
-
-@app.route("/delete_vehicle/<int:vehicle_id>")
-def delete_vehicle(vehicle_id):
-    conn = get_vehicle_db()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM vehicles WHERE id=?", (vehicle_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for("manage_vehicles"))
-
-@app.route("/admin/cameras")
-def manage_cameras():
-    conn = get_authority_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM cameras")
-    cameras = cur.fetchall()
-    conn.close()
-    return render_template("cameras.html", cameras=cameras)
-
-@app.route("/admin/cameras/add", methods=["GET", "POST"])
-def add_camera():
-    if request.method == "POST":
-        location = request.form["location"]
-        status = request.form.get("status", "ONLINE")
-
-        conn = get_authority_db()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO cameras (location, status)
-            VALUES (?, ?)
-        """, (location, status))
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for("manage_cameras"))
-
-    return render_template("add_camera.html")
-
-@app.route("/admin/cameras/toggle/<int:camera_id>")
-def toggle_camera(camera_id):
-    conn = get_authority_db()
-    cur = conn.cursor()
-
-    # Get current status
-    cur.execute("SELECT status FROM cameras WHERE id=?", (camera_id,))
-    row = cur.fetchone()
-
-    if row:
-        new_status = "OFFLINE" if row["status"] == "ONLINE" else "ONLINE"
-        cur.execute(
-            "UPDATE cameras SET status=? WHERE id=?",
-            (new_status, camera_id)
-        )
-        conn.commit()
-
-    conn.close()
-    return redirect(url_for("manage_cameras"))
-
-# =================================================
-# GATE
-# =================================================
-@app.route("/gate")
-def gate_entry():
-    return redirect(url_for("gate_login"))
-
-@app.route("/gate-login", methods=["GET", "POST"])
-def gate_login():
-    conn = sqlite3.connect(ADMIN_DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM locations")
-    locations = [r[0] for r in cur.fetchall()]
-    conn.close()
-
-    if request.method == "POST":
-        # ✅ MASTER GATE PASSWORD
-        MASTER_GATE_PASSWORD = "gate123"  # you can change this
-
-        if request.form["password"] != MASTER_GATE_PASSWORD:
-            return render_template(
-                "gate_login.html",
-                locations=locations,
-                error="Invalid gate password"
-            )
-
-        # ✅ LOGIN SUCCESS → ANY GATE
-        return redirect(
-            url_for("gate_dashboard", gate=request.form["location"])
-        )
-
-    return render_template("gate_login.html", locations=locations)
-
-@app.route("/gate/dashboard/<gate>")
-def gate_dashboard(gate):
-    return render_template("gate_dashboard.html", gate=gate)
 
 @app.route("/video_feed/<gate>")
 def video_feed(gate):

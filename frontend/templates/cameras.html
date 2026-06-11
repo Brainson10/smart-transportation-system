@@ -14,7 +14,7 @@
   </div>
 
   <div class="header-actions">
-    <a href="{{ url_for('add_camera') }}" class="run-ai-btn">
+    <a href="{{ url_for('camera_management.add_camera') }}" class="run-ai-btn">
       + Add Camera
     </a>
 
@@ -43,7 +43,7 @@
             {{ c[4] }}
           </span>
 
-          <a href="{{ url_for('toggle_camera', camera_id=c[0]) }}"
+          <a href="{{ url_for('camera_management.toggle_camera', camera_id=c[0]) }}"
              class="action-btn toggle-btn">
             Toggle
           </a>

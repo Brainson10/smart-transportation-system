@@ -24,7 +24,7 @@
             <div class="error">{{ error }}</div>
             {% endif %}
 
-            <form method="POST" action="{{ url_for('gate_login') }}">
+            <form method="POST" action="{{ url_for('gate_routes.gate_login') }}">
                 <div class="form-group">
                     <label>Gate Location</label>
                     <select name="location" required>
