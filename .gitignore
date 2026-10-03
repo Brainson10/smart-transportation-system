@@ -16,3 +16,15 @@ logs/*.txt
 
 # OS
 .DS_Store
+logs/detections/
+out/
+.pytest_cache/
+
+# Runtime state created by the app
+backups/
+instance/
+*.db-wal
+*.db-shm
+
+# The trained model IS committed deliberately (it was force-added before)
+!authority/model.pkl

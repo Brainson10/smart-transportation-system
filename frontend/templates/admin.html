@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Admin Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -16,11 +17,22 @@
 
   <div class="header-actions">
     <a href="{{ url_for('home') }}" class="btn-outline">Home</a>
-    <a href="{{ url_for('vehicle.manage_vehicles') }}" class="btn-outline">Manage Vehicles</a>
-    <a href="{{ url_for('camera_management.manage_cameras') }}" class="btn-outline">Manage Cameras</a>
-    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">Run AI Risk Prediction</a>
+    <a href="{{ url_for('vehicle.manage_vehicles') }}" class="btn-outline">Vehicles</a>
+    <a href="{{ url_for('violation.view_violations') }}" class="btn-outline">Violations</a>
+    <a href="{{ url_for('camera_management.manage_cameras') }}" class="btn-outline">Cameras</a>
+    <a href="{{ url_for('manage_roads') }}" class="btn-outline">Roads</a>
+    <form method="POST" action="{{ url_for('run_ai') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="run-ai-btn">Run AI Risk Prediction</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.admin_logout') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn-outline">Logout</button>
+    </form>
   </div>
 </header>
+
+{% include "_flash.html" %}
 
 <!-- ================= STATS ================= -->
 <section class="stats">
@@ -28,34 +40,8 @@
   <div class="stat-card">Active Vehicles<br><b>{{ active_vehicles }}</b></div>
   <div class="stat-card">Total Cameras<br><b>{{ total_cameras }}</b></div>
   <div class="stat-card">Cameras Online<br><b>{{ online_cameras }} / {{ total_cameras }}</b></div>
-  <div class="stat-card">AI Alerts<br><b>{{ alerts }}</b></div>
+  <div class="stat-card">High-Risk Roads<br><b>{{ alerts }}</b></div>
 </section>
-
-<!-- ================= TOP HIGH RISK ROADS ================= -->
-<!-- <section>
-  <h2>Top High-Risk Road Segments</h2>
-
-  {% if high_risk_roads and high_risk_roads|length > 0 %}
-    <div class="risk-grid">
-      {% for r in high_risk_roads %}
-        <div class="risk-card {{ r[1]|lower }}">
-          <h3>{{ r[0] }}</h3>
-          <span class="risk-level">{{ r[1] }}</span>
-          <p>{{ r[2] }}</p>
-          <div class="confidence">AI Confidence: {{ r[3] }}%</div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p>No high-risk segments detected in the latest prediction run.</p>
-  {% endif %}
-
-  <div style="margin-top: 20px;">
-    <a href="{{ url_for('manage_roads') }}" class="view-btn">
-      View All Road Risk Analysis
-    </a>
-  </div>
-</section> -->
 
 <!-- ================= TOP HIGH RISK ROADS ================= -->
 <section>
@@ -77,8 +63,8 @@
             {{ r[2] }}
           </p>
 
-          <div class="confidence">
-            AI Confidence: {{ r[3] }}%
+          <div class="confidence" title="Predicted accident count scaled to 0-100">
+            Risk score: {{ r[3] }}/100
           </div>
 
         </div>
@@ -112,8 +98,7 @@
       <li>
         Highest risk observed at
         <strong>{{ high_risk_roads[0][0] }}</strong>
-        with confidence
-        <strong>{{ high_risk_roads[0][3] }}%</strong>.
+        (risk score <strong>{{ high_risk_roads[0][3] }}/100</strong>).
       </li>
     {% endif %}
 
@@ -126,28 +111,11 @@
 </section>
 
 <!-- ================= LOCATION VIOLATIONS ================= -->
-<!-- <section class="admin-section">
-  <h2 class="section-title">Location Violation Overview</h2>
-
-  {% if location_overview %}
-    <div class="location-grid">
-      {% for loc in location_overview %}
-        <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
-          <h3>{{ loc[0] }}</h3>
-          <p class="violation-count">
-            Violations: <strong>{{ loc[1] }}</strong>
-          </p>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p>No AI road segments available.</p>
-  {% endif %}
-</section> -->
-
-<!-- ================= LOCATION VIOLATIONS ================= -->
 <section class="admin-section">
   <h2 class="section-title">Location Violation Overview</h2>
+  <p style="margin:-6px 0 14px;">
+    <a href="{{ url_for('add_location') }}" class="view-btn">+ Add Location</a>
+  </p>
 
   {% if locations and locations|length > 0 %}
     <div class="location-grid">
@@ -168,11 +136,14 @@
               No prohibited time set
             </p>
           {% endif %}
+          <p style="margin-top:8px;font-size:13px;">
+            <a href="{{ url_for('edit_prohibited_time', segment=loc[0]) }}">Edit prohibited time</a>
+          </p>
         </div>
       {% endfor %}
     </div>
   {% else %}
-    <p>No AI road segments available.</p>
+    <p>No locations yet. <a href="{{ url_for('add_location') }}">Add one</a>.</p>
   {% endif %}
 </section>
 
@@ -194,10 +165,10 @@
         <tbody>
           {% for v in today_violations %}
             <tr>
-              <td>{{ v[0] }}</td>
-              <td>{{ v[1] }}</td>
-              <td>{{ v[2] }}</td>
-              <td>{{ v[3] }}</td>
+              <td>{{ v.vehicle_number }}</td>
+              <td>{{ v.location }}</td>
+              <td>{{ v.violation_type }}</td>
+              <td>{{ v.local_time }}</td>
             </tr>
           {% endfor %}
         </tbody>

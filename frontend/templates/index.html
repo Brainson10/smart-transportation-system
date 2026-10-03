@@ -27,7 +27,7 @@
         <h2>Gate Security System</h2>
         <p>
             Real-time vehicle entry monitoring using ANPR,
-            confidence checks, and privacy-preserving decisions.
+            confidence checks, and rule-based access decisions.
         </p>
         <a href="/gate" class="btn">Open Gate System</a>
     </div>
@@ -40,28 +40,29 @@
   <p>
     The Smart Transportation System is an AI-enabled decision-support platform
     designed to enhance road safety planning and campus vehicle access management.
-    The system follows privacy-by-design principles and supports ethical, explainable AI.
+    Every gate decision shows the plate read and its confidence, and low-confidence
+    reads are routed to a human for manual review.
   </p>
 </section>
 
 
-<!-- ================= KEY STATISTICS ================= -->
+<!-- ================= KEY STATISTICS (live from the database) ================= -->
 <section class="gov-stats">
   <div class="gov-stat">
-    <h3>120+</h3>
-    <span>Accident-Prone Locations Analyzed</span>
+    <h3>{{ stats.segments }}</h3>
+    <span>Road Segments Analysed</span>
   </div>
   <div class="gov-stat">
-    <h3>500+</h3>
-    <span>Vehicles Processed</span>
+    <h3>{{ stats.vehicles }}</h3>
+    <span>Registered Vehicles</span>
   </div>
   <div class="gov-stat">
-    <h3>Real-Time</h3>
-    <span>Gate Entry Monitoring</span>
+    <h3>{{ stats.locations }}</h3>
+    <span>Monitored Locations</span>
   </div>
   <div class="gov-stat">
-    <h3>Privacy First</h3>
-    <span>Masked Vehicle Identification</span>
+    <h3>{{ stats.violations }}</h3>
+    <span>Violations Recorded</span>
   </div>
 </section>
 
@@ -98,7 +99,7 @@
     <li>Video and sensor data are captured from deployed cameras.</li>
     <li>AI models analyze risk levels and vehicle authenticity.</li>
     <li>Explainable outputs support authority planning decisions.</li>
-    <li>Gate personnel receive privacy-preserving entry alerts.</li>
+    <li>Gate personnel receive the decision, with the plate image saved as evidence.</li>
   </ol>
 </section>
 

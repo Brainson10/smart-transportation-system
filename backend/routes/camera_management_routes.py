@@ -1,65 +1,64 @@
-import sqlite3
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
-from flask import Blueprint, redirect, render_template, request, url_for
-
-from config import AUTHORITY_DB
+from backend.auth import admin_required
+from backend.db import authority_db
 
 
 camera_management_bp = Blueprint("camera_management", __name__)
-
-
-def get_authority_db():
-    conn = sqlite3.connect(AUTHORITY_DB)
-    conn.row_factory = sqlite3.Row
-    return conn
+CAMERA_STATUSES = ("ONLINE", "OFFLINE")
 
 
 @camera_management_bp.route("/admin/cameras")
+@admin_required
 def manage_cameras():
-    conn = get_authority_db()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM cameras")
-    cameras = cur.fetchall()
-    conn.close()
+    with authority_db() as conn:
+        cameras = conn.execute(
+            "SELECT id, name, location, zone, status, coverage FROM cameras ORDER BY id"
+        ).fetchall()
     return render_template("cameras.html", cameras=cameras)
 
 
 @camera_management_bp.route("/admin/cameras/add", methods=["GET", "POST"])
+@admin_required
 def add_camera():
     if request.method == "POST":
-        location = request.form["location"]
+        name = (request.form.get("name") or "").strip()
+        location = (request.form.get("location") or "").strip()
+        zone = (request.form.get("zone") or "").strip() or None
+        coverage = (request.form.get("coverage") or "").strip() or None
         status = request.form.get("status", "ONLINE")
 
-        conn = get_authority_db()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO cameras (location, status)
-            VALUES (?, ?)
-        """, (location, status))
-        conn.commit()
-        conn.close()
+        error = None
+        if not name or not location:
+            error = "Camera name and location are required."
+        elif status not in CAMERA_STATUSES:
+            error = "Status must be ONLINE or OFFLINE."
+        if error:
+            return render_template("add_camera.html", error=error, form=request.form), 400
 
+        # The old INSERT only wrote (location, status): the name the form collected
+        # was silently dropped, so every added camera appeared nameless.
+        with authority_db() as conn:
+            with conn:
+                conn.execute(
+                    "INSERT INTO cameras (name, location, zone, status, coverage) "
+                    "VALUES (?, ?, ?, ?, ?)", (name, location, zone, status, coverage))
+        flash(f"Added {name}.")
         return redirect(url_for("camera_management.manage_cameras"))
 
-    return render_template("add_camera.html")
+    return render_template("add_camera.html", form={})
 
 
-@camera_management_bp.route("/admin/cameras/toggle/<int:camera_id>")
+@camera_management_bp.route("/admin/cameras/toggle/<int:camera_id>", methods=["POST"])
+@admin_required
 def toggle_camera(camera_id):
-    conn = get_authority_db()
-    cur = conn.cursor()
-
-    # Get current status
-    cur.execute("SELECT status FROM cameras WHERE id=?", (camera_id,))
-    row = cur.fetchone()
-
-    if row:
-        new_status = "OFFLINE" if row["status"] == "ONLINE" else "ONLINE"
-        cur.execute(
-            "UPDATE cameras SET status=? WHERE id=?",
-            (new_status, camera_id)
-        )
-        conn.commit()
-
-    conn.close()
+    with authority_db() as conn:
+        row = conn.execute("SELECT name, status FROM cameras WHERE id = ?",
+                           (camera_id,)).fetchone()
+        if row:
+            new_status = "OFFLINE" if row["status"] == "ONLINE" else "ONLINE"
+            with conn:
+                conn.execute("UPDATE cameras SET status = ? WHERE id = ?",
+                             (new_status, camera_id))
+            flash(f"{row['name'] or 'Camera'} is now {new_status}.")
     return redirect(url_for("camera_management.manage_cameras"))

@@ -1,41 +1,59 @@
-import sqlite3
+from urllib.parse import urlparse
 
-from flask import Blueprint, redirect, render_template, request, session, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
 
-from config import VEHICLE_DB
+from backend.auth import (login_admin, login_throttle, logout, throttle_key,
+                          verify_password)
+from backend.db import vehicle_db
 
 
 admin_bp = Blueprint("admin", __name__)
 
 
+def _safe_next(target):
+    """Only follow same-site relative redirects after login (no open redirect)."""
+    if not target:
+        return None
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc or not target.startswith("/"):
+        return None
+    return target
+
+
 @admin_bp.route("/admin-login", methods=["GET", "POST"])
 def admin_login():
+    next_url = _safe_next(request.values.get("next"))
+
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+        key = throttle_key("admin")
+        wait = login_throttle.retry_after(key)
+        if wait:
+            return render_template(
+                "admin_login.html", next=next_url,
+                error=f"Too many failed attempts. Try again in {wait} seconds."), 429
 
-        conn = sqlite3.connect(VEHICLE_DB)
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM admins WHERE username=? AND password=?",
-            (username, password),
-        )
-        admin = cur.fetchone()
-        conn.close()
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
 
-        if admin:
-            session["admin_logged_in"] = True
-            return redirect(url_for("admin_dashboard"))
+        with vehicle_db() as conn:
+            admin = conn.execute(
+                "SELECT username, password FROM admins WHERE username = ?",
+                (username,)).fetchone()
 
-        return render_template(
-            "admin_login.html",
-            error="Invalid admin credentials",
-        )
+        # verify_password runs even for unknown usernames (equal timing).
+        if verify_password(admin["password"] if admin else None, password) and admin:
+            login_throttle.reset(key)
+            login_admin(admin["username"])
+            return redirect(next_url or url_for("admin_dashboard"))
 
-    return render_template("admin_login.html")
+        login_throttle.record_failure(key)
+        return render_template("admin_login.html", next=next_url,
+                               error="Invalid admin credentials"), 401
+
+    return render_template("admin_login.html", next=next_url)
 
 
-@admin_bp.route("/admin-logout")
+@admin_bp.route("/admin-logout", methods=["GET", "POST"])
 def admin_logout():
-    session.pop("admin_logged_in", None)
+    logout()
     return redirect(url_for("admin.admin_login"))

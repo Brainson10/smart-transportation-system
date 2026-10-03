@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ code }} – {{ title }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-100">
+
+<main class="flex-1 flex items-center justify-center px-6">
+  <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md text-center">
+    <p class="text-5xl font-bold text-slate-300">{{ code }}</p>
+    <h1 class="text-xl font-semibold text-slate-800 mt-2">{{ title }}</h1>
+    {% if message %}
+      <p class="text-sm text-slate-500 mt-3">{{ message }}</p>
+    {% endif %}
+    <div class="mt-6 flex justify-center gap-3 text-sm">
+      <a href="javascript:history.back()" class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50">Go back</a>
+      <a href="{{ url_for('home') }}" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Home</a>
+    </div>
+  </div>
+</main>
+
+<footer class="text-center text-xs text-slate-500 py-4">
+  © 2026 Smart Transportation System | Academic Demo
+</footer>
+
+</body>
+</html>

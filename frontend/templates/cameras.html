@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Camera Management</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -24,29 +25,36 @@
   </div>
 </header>
 
+{% include "_flash.html" %}
+
 <section>
   <h2>Registered Cameras</h2>
+  <p class="list-meta">
+    Camera records here are inventory metadata. The live gate feed is configured with
+    <code>ANPR_CAMERA_SOURCE</code> (see README).
+  </p>
 
   {% if cameras %}
     {% for c in cameras %}
       <div class="vehicle">
         <div>
-          <strong>{{ c[1] }}</strong><br>
+          <strong>{{ c.name or 'Unnamed camera' }}</strong><br>
           <small>
-            Location: {{ c[2] }} · Zone: {{ c[3] }}<br>
-            Coverage: {{ c[5] }}
+            Location: {{ c.location or '—' }} · Zone: {{ c.zone or '—' }}<br>
+            Coverage: {{ c.coverage or '—' }}
           </small>
         </div>
 
         <div class="actions">
-          <span class="status {{ c[4]|lower }}">
-            {{ c[4] }}
+          <span class="status {{ (c.status or '')|lower }}">
+            {{ c.status }}
           </span>
 
-          <a href="{{ url_for('camera_management.toggle_camera', camera_id=c[0]) }}"
-             class="action-btn toggle-btn">
-            Toggle
-          </a>
+          <form method="POST" class="inline-form"
+                action="{{ url_for('camera_management.toggle_camera', camera_id=c.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="action-btn toggle-btn">Toggle</button>
+          </form>
         </div>
       </div>
     {% endfor %}

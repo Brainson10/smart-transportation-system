@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>AI Risk Classification</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -15,11 +16,17 @@
   </div>
 
   <div class="header-actions">
-    <a href="{{ url_for('run_ai') }}" class="run-ai-btn">Re-Run AI</a>
+    <form method="POST" action="{{ url_for('run_ai') }}" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="roads">
+      <button type="submit" class="run-ai-btn">Re-Run AI</button>
+    </form>
     <a href="{{ url_for('admin_dashboard') }}" class="btn-outline">Back to Dashboard</a>
     <a href="{{ url_for('add_road') }}" class="btn-outline">+ Add New Road</a>
   </div>
 </header>
+
+{% include "_flash.html" %}
 
 <!-- ================= CONTENT ================= -->
 <section>
@@ -41,8 +48,8 @@
             {{ r.explanation }}
           </p>
 
-          <div class="confidence">
-            AI Confidence: {{ r.confidence }}%
+          <div class="confidence" title="Predicted accident count scaled to 0-100">
+            Risk score: {{ r.confidence }}/100
           </div>
 
           <div class="accident-count">

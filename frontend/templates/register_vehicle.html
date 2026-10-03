@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <title>Register Vehicle</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="stylesheet" href="{{ url_for('static', filename='register.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -17,8 +17,8 @@
       <h1>Register Vehicle</h1>
       <p>Smart Transportation System – AI Safety Intelligence</p>
 
-      <a href="{{ url_for('admin_dashboard') }}" class="btn primary">
-        ← Back to Admin Dashboard
+      <a href="{{ url_for('vehicle.manage_vehicles') }}" class="btn primary">
+        ← Back to Vehicles
       </a>
     </div>
   </header>
@@ -33,36 +33,55 @@
           Add a new vehicle to the campus access system
         </p>
 
+        {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
+
         <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <div class="form-group">
-            <label>Vehicle Number</label>
-            <input type="text" name="number" placeholder="MN01AB1234" required>
+            <label for="number">Vehicle Number</label>
+            <input type="text" id="number" name="number" placeholder="MN01AB1234"
+                   value="{{ form.get('number', '') }}" maxlength="16" required
+                   autocapitalize="characters">
+            <p class="form-hint">Spaces and dashes are ignored; letters are upper-cased.</p>
           </div>
 
           <div class="form-group">
-            <label>Owner Name</label>
-            <input type="text" name="owner" placeholder="Owner full name" required>
+            <label for="owner">Owner Name</label>
+            <input type="text" id="owner" name="owner" placeholder="Owner full name"
+                   value="{{ form.get('owner', '') }}" maxlength="80" required>
           </div>
 
           <div class="form-group">
-            <label>Vehicle Type</label>
-            <input type="text" name="type" placeholder="Car / Bike / Truck" required>
+            <label for="type">Vehicle Type</label>
+            <select id="type" name="type" required>
+              <option value="" disabled {{ '' if form.get('type') else 'selected' }}>Choose a type</option>
+              {% for t in types %}
+                <option value="{{ t }}" {{ 'selected' if form.get('type') == t }}>{{ t }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="form-group">
             <label for="role">Role</label>
-            <input type="text" id="role" name="role" placeholder="Student/Staff/Emergency vehicle" required>
+            <select id="role" name="role" required>
+              <option value="" disabled {{ '' if form.get('role') else 'selected' }}>Choose a role</option>
+              {% for r in roles %}
+                <option value="{{ r }}" {{ 'selected' if form.get('role') == r }}>{{ r }}</option>
+              {% endfor %}
+            </select>
+            <p class="form-hint">Emergency vehicles are admitted during prohibited hours.</p>
           </div>
 
           <div class="form-group">
-            <label>Phone Number</label>
-            <input type="text" name="phone" placeholder="Enter the Phone Number" required>
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="10-13 digits"
+                   value="{{ form.get('phone', '') }}" maxlength="16" required>
           </div>
 
           <div class="form-actions">
             <button type="submit" class="btn primary">Register Vehicle</button>
-            <a href="{{ url_for('admin_dashboard') }}" class="btn link">Cancel</a>
+            <a href="{{ url_for('vehicle.manage_vehicles') }}" class="btn link">Cancel</a>
           </div>
 
         </form>

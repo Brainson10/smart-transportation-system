@@ -35,7 +35,14 @@
             Prohibited Time Settings
         </p>
 
+        {% if error %}
+        <div class="bg-red-50 text-red-700 border border-red-200 rounded-lg px-4 py-2 text-sm mb-4">
+            {{ error }}
+        </div>
+        {% endif %}
+
         <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Start Time -->
             <div>
@@ -44,7 +51,7 @@
                 </label>
                 <input type="time"
                        name="prohibited_start"
-                       value="{{ road[1] }}"
+                       value="{{ road[1] or '' }}"
                        class="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
 
@@ -55,8 +62,12 @@
                 </label>
                 <input type="time"
                        name="prohibited_end"
-                       value="{{ road[2] }}"
+                       value="{{ road[2] or '' }}"
                        class="w-full rounded-lg border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <p class="text-xs text-slate-500 mt-2">
+                    Local time. Windows may cross midnight (e.g. 22:00–06:00).
+                    Clear both fields to remove the restriction.
+                </p>
             </div>
 
             <!-- Buttons -->

@@ -1,207 +1,343 @@
+"""
+MJPEG streaming and the detection worker.
+
+The key architectural change: streaming and inference are now separate threads.
+Previously generate_frames() ran YOLO + OCR inline, so every slow OCR call
+stalled the video feed, and three code paths `continue`d with no sleep at all --
+busy-spinning the CPU while re-encoding the same frozen JPEG.
+
+Per-gate state also replaces module globals, so two gates can no longer corrupt
+each other's votes, and reset_detection_state() actually resets things (the old
+resume_detection rebound imported names, which only touched locals and left
+gate.camera's globals stale).
+"""
+
+import logging
+import threading
+import time
+from datetime import datetime
+
 import cv2
-import atexit
 import numpy as np
-import re
-from collections import defaultdict
 
-from gate.anpr import run_anpr
-from gate import decision
+import config
+from gate import capture, decision
+from gate.anpr import annotate, run_anpr
 from gate.decision import decide, update_latest_result
+from gate.plate_utils import PlateVoter, normalize_plate
+
+log = logging.getLogger(__name__)
+
+# Re-exported for backwards compatibility: this used to live in this module.
+normalize_vehicle_number = normalize_plate
+
+
+class DetectionState:
+    """Everything one gate's detection worker needs, guarded by its own lock."""
+
+    def __init__(self, gate):
+        self.gate = gate
+        self.lock = threading.Lock()
+        self.voter = PlateVoter()
+        self.detections = []
+        self.frozen_frame = None
+        self.last_infer_ts = 0.0
+        self.last_motion_ts = 0.0
+        self.prev_gray = None
+        self.best_by_plate = {}
+        self.infer_ms = 0.0
+        self.stop_event = threading.Event()
+        self.thread = None
+
+    def reset(self):
+        with self.lock:
+            self.voter.reset()
+            self.detections = []
+            self.prev_gray = None
+            self.best_by_plate.clear()
+            self.last_infer_ts = 0.0
+            self.last_motion_ts = 0.0
+
+
+_STATES = {}
+_STATES_LOCK = threading.Lock()
+
+
+def _state_key(gate):
+    return (gate or "default").strip().lower()
+
+
+def get_state(gate=None):
+    key = _state_key(gate)
+    with _STATES_LOCK:
+        state = _STATES.get(key)
+        if state is None:
+            state = DetectionState(key)
+            _STATES[key] = state
+        return state
+
+
+def reset_detection_state(gate=None):
+    """
+    Real reset, called by decision.resume_detection.
+
+    The old code did `from gate.camera import PLATE_VOTES, frame_count, prev_gray`
+    then `frame_count = 0; prev_gray = None`, which rebound local names only --
+    gate.camera's globals survived, so the frame after a resume was motion-diffed
+    against a frame from before the pause.
+    """
+    with _STATES_LOCK:
+        states = list(_STATES.values()) if gate is None else [_STATES.get(_state_key(gate))]
+    for state in states:
+        if state is not None:
+            state.reset()
+            log.debug("detection state reset (gate=%s)", state.gate)
+
 
 # =================================================
-# CAMERA INIT
+# MOTION (a cost-saver only, never a gate)
 # =================================================
-cap = cv2.VideoCapture(0)
-print("Camera opened:", cap.isOpened())
+def _motion(state, frame):
+    """
+    Cheap frame-difference motion check.
 
-@atexit.register
-def cleanup():
-    cap.release()
+    The original code used this as a hard gate AND refreshed prev_gray every
+    frame, so a vehicle that stopped at the gate produced no delta and was never
+    OCR'd -- detection only ever ran while the plate was moving, and therefore
+    blurriest. prev_gray is now only refreshed on a still scene, so "arrived and
+    stopped" still registers, and MOTION_FORCE_INTERVAL guarantees inference
+    regardless.
+    """
+    gray = cv2.GaussianBlur(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (21, 21), 0)
+    if state.prev_gray is None:
+        state.prev_gray = gray
+        return True
+
+    delta = cv2.absdiff(state.prev_gray, gray)
+    thresh = cv2.threshold(delta, 25, 255, cv2.THRESH_BINARY)[1]
+    moving = cv2.countNonZero(thresh) > config.MOTION_THRESHOLD
+    if not moving:
+        state.prev_gray = gray
+    return moving
+
 
 # =================================================
-# CONFIG
+# EVIDENCE
 # =================================================
-FRAME_SKIP = 2
-MOTION_THRESHOLD = 1500
-MIN_PLATE_AREA = 700
+def _save_evidence(frame, detection, plate, confidence):
+    if not config.SAVE_DETECTION_CROPS:
+        return None
+    try:
+        now = datetime.now()
+        folder = config.DETECTION_DIR / now.strftime("%Y%m%d")
+        folder.mkdir(parents=True, exist_ok=True)
+        stem = f"{now.strftime('%H%M%S')}_{plate}_{confidence}"
+        path = folder / f"{stem}.jpg"
+        cv2.imwrite(str(path), frame)
+        if detection is not None and detection.crop is not None and detection.crop.size:
+            cv2.imwrite(str(folder / f"{stem}_crop.jpg"), detection.crop)
+        return str(path)
+    except Exception as exc:
+        log.warning("could not save evidence: %s", exc)
+        return None
 
-# 🔥 PLATE VOTING
-PLATE_VOTES = defaultdict(int)
-VOTE_THRESHOLD = 2  # plate must appear 2 times
-
-frame_count = 0
-prev_gray = None
-last_frame = None
 
 # =================================================
-# MAIN FRAME GENERATOR
+# DETECTION WORKER
 # =================================================
+def start_detection_worker(gate=None):
+    """Idempotent: one worker thread per gate."""
+    state = get_state(gate)
+    with state.lock:
+        if state.thread and state.thread.is_alive():
+            return state
+        state.stop_event.clear()
+        state.thread = threading.Thread(
+            target=_worker_loop, args=(state,), name=f"anpr-{state.gate}", daemon=True
+        )
+        state.thread.start()
+    log.info("detection worker started (gate=%s)", state.gate)
+    return state
+
+
+def _worker_loop(state):
+    stream = capture.get_stream(state.gate)
+    last_seq = -1
+
+    while not state.stop_event.is_set():
+        if decision.is_paused():
+            time.sleep(0.2)
+            continue
+
+        frame, seq = stream.read_new(last_seq, timeout=1.0)
+        if frame is None:
+            continue
+        last_seq = seq
+
+        now = time.monotonic()
+        if now - state.last_infer_ts < config.DETECT_INTERVAL:
+            continue
+
+        # Motion only RAISES the rate; a still scene is still inferred every
+        # MOTION_FORCE_INTERVAL seconds, so a stopped vehicle is always read.
+        if config.MOTION_ENABLED:
+            moving = _motion(state, frame)
+            if moving:
+                state.last_motion_ts = now
+            elif now - state.last_infer_ts < config.MOTION_FORCE_INTERVAL:
+                continue
+
+        state.last_infer_ts = now
+        started = time.monotonic()
+        try:
+            result = run_anpr(frame)
+        except Exception:
+            log.exception("ANPR failed")
+            continue
+        state.infer_ms = (time.monotonic() - started) * 1000.0
+
+        with state.lock:
+            state.detections = result["detections"]
+
+        plate = result["vehicle_number"]
+        if not plate:
+            if result["status"] == "PLATE_UNREADABLE":
+                update_latest_result({
+                    "decision": "WAITING",
+                    "reason": "Plate detected, not readable yet",
+                })
+            continue
+
+        confidence = result["confidence"]
+        with state.lock:
+            # Keep the BEST sighting of each plate, not the last: a marginal
+            # final frame should not drag a good read into MANUAL CHECK.
+            previous = state.best_by_plate.get(plate)
+            if previous is None or confidence > previous["confidence"]:
+                state.best_by_plate[plate] = result
+            locked = state.voter.add(plate, confidence)
+
+        if not locked:
+            log.debug("vote %s conf=%d tally=%s", plate, confidence,
+                      state.voter.snapshot())
+            continue
+
+        with state.lock:
+            best = state.best_by_plate.get(locked, result)
+            best_detection = next(
+                (d for d in best["detections"] if d.plate == locked), None
+            )
+            state.voter.reset()
+            state.best_by_plate.clear()
+
+        image_path = _save_evidence(frame, best_detection, locked, best["confidence"])
+        log.info("LOCKED %s conf=%d raw=%r evidence=%s",
+                 locked, best["confidence"], best["raw_text"], image_path)
+
+        try:
+            decide({
+                "status": best["status"],
+                "vehicle_number": locked,
+                "confidence": best["confidence"],
+                "bbox": best["bbox"],
+                "raw_text": best["raw_text"],
+            }, state.gate)
+        except Exception:
+            log.exception("decision engine failed")
+            update_latest_result({
+                "vehicle_number": locked,
+                "confidence": best["confidence"],
+                "decision": "MANUAL CHECK",
+                "reason": "Decision engine error",
+            })
+
+
+# =================================================
+# MJPEG STREAM (no inference here)
+# =================================================
+def _overlay(state, frame, stream):
+    with state.lock:
+        detections = list(state.detections)
+        tally = state.voter.snapshot()
+        infer_ms = state.infer_ms
+    lines = [
+        f"gate={state.gate}  source={config.CAMERA_SOURCE}  device={config.YOLO_DEVICE}",
+        f"engine={config.OCR_ENGINE}  infer={infer_ms:.0f}ms  frames={stream.stats()['frames']}",
+    ]
+    if tally:
+        lines.append(f"votes: {tally}")
+    return annotate(frame, detections, lines)
+
+
 def generate_frames(gate=None):
-    global frame_count, prev_gray, last_frame, PLATE_VOTES
+    """
+    MJPEG generator. Paces to STREAM_FPS and never runs inference, so the feed
+    stays smooth no matter how long OCR takes.
+    """
+    state = get_state(gate)
+    stream = capture.get_stream(state.gate)
+    start_detection_worker(gate)
+
+    interval = 1.0 / max(1, config.STREAM_FPS)
 
     while True:
+        started = time.monotonic()
         try:
-            # 🔒 HARD PAUSE (FREEZE FRAME)
-            if decision.PAUSED_FOR_MANUAL:
-                if last_frame is not None:
-                    yield _encode_frame(last_frame)
-                else:
-                    yield _black_frame()
+            if decision.is_paused():
+                # Show the frozen frame WITH its detection box still drawn.
+                frozen = state.frozen_frame
+                yield _encode_frame(frozen) if frozen is not None else _black_frame("PAUSED")
+                time.sleep(0.5)
                 continue
 
-            if not cap.isOpened():
+            frame, _ = stream.read(timeout=1.0)
+            if frame is None:
                 update_latest_result({
                     "decision": "WAITING",
-                    "reason": "Camera not accessible"
+                    "reason": "Camera not accessible",
                 })
-                yield _black_frame()
+                yield _black_frame("CAMERA OFFLINE")
+                time.sleep(0.5)
                 continue
 
-            success, frame = cap.read()
-            if not success:
-                update_latest_result({
-                    "decision": "WAITING",
-                    "reason": "No frame from camera"
-                })
-                continue
+            annotated = _overlay(state, frame, stream)
+            state.frozen_frame = annotated
+            yield _encode_frame(annotated)
 
-            last_frame = frame.copy()
+            time.sleep(max(0.0, interval - (time.monotonic() - started)))
 
-            # ================= MOTION DETECTION =================
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (21, 21), 0)
+        except GeneratorExit:
+            raise
+        except Exception:
+            log.exception("stream loop error")
+            yield _black_frame("STREAM ERROR")
+            time.sleep(0.5)
 
-            motion_detected = False
-            if prev_gray is not None:
-                delta = cv2.absdiff(prev_gray, gray)
-                thresh = cv2.threshold(delta, 25, 255, cv2.THRESH_BINARY)[1]
-                if cv2.countNonZero(thresh) > MOTION_THRESHOLD:
-                    motion_detected = True
-
-            prev_gray = gray
-
-            if not motion_detected:
-                yield _encode_frame(frame)
-                continue
-
-            # ================= FRAME SKIP =================
-            frame_count += 1
-            if frame_count % FRAME_SKIP != 0:
-                yield _encode_frame(frame)
-                continue
-
-            # ================= ANPR =================
-            try:
-                anpr_result = run_anpr(frame)
-            except Exception as e:
-                print(" ANPR ERROR:", e)
-                yield _encode_frame(frame)
-                continue
-
-            # ================= PLATE SIZE FILTER =================
-            if "bbox" in anpr_result:
-                x, y, w, h = anpr_result["bbox"]
-                if w * h < MIN_PLATE_AREA:
-                    yield _encode_frame(frame)
-                    continue
-
-            raw_plate = anpr_result.get("vehicle_number")
-            plate = normalize_vehicle_number(raw_plate)
-
-            # 🔍 DEBUG (THIS IS CRITICAL)
-            print("OCR RAW:", raw_plate)
-            print("NORMALIZED:", plate)
-
-            # ================= VOTING =================
-            if plate:
-                PLATE_VOTES[plate] += 1
-                print("VOTE:", plate, PLATE_VOTES[plate])
-
-                if PLATE_VOTES[plate] >= VOTE_THRESHOLD:
-                    anpr_result["vehicle_number"] = plate
-
-                    try:
-                        final_decision = decide(anpr_result, gate)
-                    except Exception as e:
-                        print(" DECISION ERROR:", e)
-                        final_decision = {
-                            "vehicle_number": plate,
-                            "confidence": anpr_result.get("confidence", 0),
-                            "decision": "MANUAL CHECK",
-                            "reason": "Decision engine error"
-                        }
-
-                    update_latest_result(final_decision)
-
-                    # CLEAR ONLY AFTER FINAL LOCK
-                    PLATE_VOTES.clear()
-
-                    yield _encode_frame(frame)
-                    continue
-
-            #  Junk OCR → just continue streaming
-            yield _encode_frame(frame)
-
-        except Exception as e:
-            print(" STREAM LOOP ERROR:", e)
-            if last_frame is not None:
-                yield _encode_frame(last_frame)
-            else:
-                yield _black_frame()
-            continue
 
 # =================================================
 # FRAME ENCODERS
 # =================================================
+def _part(buffer):
+    return (b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n"
+            + buffer.tobytes()
+            + b"\r\n")
+
+
 def _encode_frame(frame):
-    ret, buffer = cv2.imencode(".jpg", frame)
-    return (
-        b"--frame\r\n"
-        b"Content-Type: image/jpeg\r\n\r\n"
-        + buffer.tobytes()
-        + b"\r\n"
+    ok, buffer = cv2.imencode(
+        ".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), config.STREAM_JPEG_QUALITY]
     )
+    if not ok:                      # the old code ignored this return value
+        return _black_frame("ENCODE ERROR")
+    return _part(buffer)
 
-def _black_frame():
+
+def _black_frame(message="NO SIGNAL"):
+    """A placeholder that says WHY there is no picture."""
     black = np.zeros((480, 640, 3), dtype=np.uint8)
-    ret, buffer = cv2.imencode(".jpg", black)
-    return (
-        b"--frame\r\n"
-        b"Content-Type: image/jpeg\r\n\r\n"
-        + buffer.tobytes()
-        + b"\r\n"
-    )
-
-# =================================================
-# PLATE NORMALIZER (FINAL & CORRECT)
-# =================================================
-def normalize_vehicle_number(raw):
-    if not raw:
-        return None
-
-    text = raw.upper()
-    text = re.sub(r"[^A-Z0-9]", "", text)
-
-    #  extract flexible Indian plate first
-    match = re.search(r"[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}", text)
-    if not match:
-        return None
-
-    plate = match.group(0)
-
-    #  NOW fix OCR mistakes ONLY in numeric part
-    state = plate[:2]
-    rto = plate[2:4]
-    series = plate[4:-4]
-    number = plate[-4:]
-
-    number = (
-        number.replace("O", "0")
-              .replace("I", "1")
-              .replace("L", "1")
-              .replace("S", "5")
-              .replace("B", "8")
-    )
-
-    return state + rto + series + number
-
+    (tw, _), _ = cv2.getTextSize(message, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)
+    cv2.putText(black, message, ((640 - tw) // 2, 240),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (60, 60, 220), 2)
+    ok, buffer = cv2.imencode(".jpg", black)
+    return _part(buffer) if ok else b""

@@ -1,0 +1,18 @@
+{# pager(endpoint, page, pages, args): args is a dict of extra query params; None values are dropped. #}
+{% macro pager(endpoint, page, pages, args={}) %}
+  {% if pages > 1 %}
+    <nav class="pagination" aria-label="Pagination">
+      {% if page > 1 %}
+        <a href="{{ url_for(endpoint, page=page - 1, **args) }}">&lsaquo; Prev</a>
+      {% else %}
+        <span class="disabled">&lsaquo; Prev</span>
+      {% endif %}
+      <span class="current">Page {{ page }} of {{ pages }}</span>
+      {% if page < pages %}
+        <a href="{{ url_for(endpoint, page=page + 1, **args) }}">Next &rsaquo;</a>
+      {% else %}
+        <span class="disabled">Next &rsaquo;</span>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endmacro %}

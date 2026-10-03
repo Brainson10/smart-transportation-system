@@ -1,10 +1,11 @@
+{% from "_pagination.html" import pager %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Violation Details</title>
-
   <link rel="stylesheet" href="{{ url_for('static', filename='violations.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 
 <body>
@@ -28,6 +29,19 @@
 
   <h2 class="section-title left">All Recorded Violations</h2>
 
+  <form method="GET" class="list-toolbar">
+    <input type="search" name="plate" value="{{ plate }}" placeholder="Plate, e.g. MN01">
+    <select name="location">
+      <option value="">All locations</option>
+      {% for loc in locations %}
+        <option value="{{ loc }}" {{ 'selected' if loc|lower == location|lower }}>{{ loc }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+    {% if plate or location %}<a href="{{ url_for('violation.view_violations') }}">Clear</a>{% endif %}
+  </form>
+  <p class="list-meta">{{ total }} violation{{ '' if total == 1 else 's' }} · times shown in local time</p>
+
   <div class="table-wrapper wide">
     {% if violations and violations|length > 0 %}
     <table>
@@ -36,25 +50,28 @@
           <th>Vehicle Number</th>
           <th>Location</th>
           <th>Violation Type</th>
-          <th>Date & Time</th>
+          <th>Date &amp; Time</th>
         </tr>
       </thead>
 
       <tbody>
         {% for v in violations %}
         <tr>
-          <td class="vehicle">{{ v[0] }}</td>
-          <td>{{ v[1] }}</td>
-          <td class="violation-type">{{ v[2] }}</td>
-          <td class="time">{{ v[3] }}</td>
+          <td class="vehicle">{{ v.vehicle_number }}</td>
+          <td>{{ v.location }}</td>
+          <td class="violation-type">{{ v.violation_type }}</td>
+          <td class="time">{{ v.local_time }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% else %}
-      <p class="empty">No violations recorded.</p>
+      <p class="empty">No violations {{ 'match this filter' if plate or location else 'recorded' }}.</p>
     {% endif %}
   </div>
+
+  {{ pager('violation.view_violations', page, pages,
+           {'plate': plate or None, 'location': location or None}) }}
 
 </main>
 

@@ -22,16 +22,18 @@
       </div>
     {% endif %}
 
-    <form method="POST">
+    <form method="POST" action="{{ url_for('admin.admin_login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
       <div class="mb-4">
         <label class="text-sm font-medium">Username</label>
-        <input type="text" name="username" required
+        <input type="text" name="username" required autocomplete="username" autofocus
                class="w-full mt-1 px-3 py-2 border rounded-lg">
       </div>
 
       <div class="mb-6">
         <label class="text-sm font-medium">Password</label>
-        <input type="password" name="password" required
+        <input type="password" name="password" required autocomplete="current-password"
                class="w-full mt-1 px-3 py-2 border rounded-lg">
       </div>
 
@@ -40,6 +42,10 @@
         Login
       </button>
     </form>
+
+    <p class="text-center text-xs text-slate-400 mt-6">
+      <a href="{{ url_for('home') }}" class="hover:underline">← Back to home</a>
+    </p>
   </div>
 
 </body>

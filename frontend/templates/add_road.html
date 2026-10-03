@@ -1,9 +1,17 @@
+{% macro choice(name, options) %}
+  <select name="{{ name }}" id="{{ name }}">
+    {% for value, label in options %}
+      <option value="{{ value }}" {{ 'selected' if form.get(name, '') == value|string }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+{% endmacro %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Add Road Segment</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='add_road.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -24,70 +32,53 @@
 <!-- ===== FORM CARD ===== -->
 <section class="page">
   <form method="POST" class="card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
 
     <div class="field">
-      <label>Road / Segment Name</label>
-      <input type="text" name="segment" required>
+      <label for="segment">Road / Segment Name</label>
+      <input type="text" id="segment" name="segment" maxlength="80" required
+             value="{{ form.get('segment', '') }}">
     </div>
 
     <div class="grid">
       <div class="field">
-        <label>Curved Road?</label>
-        <!-- FIXED: name + values -->
-        <select name="curve">
-          <option value="1">Yes</option>
-          <option value="0">No</option>
-        </select>
+        <label for="curve">Curved Road?</label>
+        {{ choice('curve', [(1, 'Yes'), (0, 'No')]) }}
       </div>
 
       <div class="field">
-        <label>Junction Present?</label>
-        <!-- FIXED: numeric values -->
-        <select name="junction">
-          <option value="1">Yes</option>
-          <option value="0">No</option>
-        </select>
+        <label for="junction">Junction Present?</label>
+        {{ choice('junction', [(1, 'Yes'), (0, 'No')]) }}
       </div>
 
       <div class="field">
-        <label>Visibility</label>
-        <!-- Low = risky -->
-        <select name="visibility">
-          <option value="0">Low</option>
-          <option value="1">Medium</option>
-          <option value="2">High</option>
-        </select>
+        <label for="visibility">Visibility</label>
+        {{ choice('visibility', [(0, 'Low'), (1, 'Medium'), (2, 'High')]) }}
       </div>
 
       <div class="field">
-        <label>Lane Width</label>
-        <!-- Narrow = risky -->
-        <select name="lane_width">
-          <option value="0">Narrow</option>
-          <option value="1">Medium</option>
-          <option value="2">Wide</option>
-        </select>
+        <label for="lane_width">Lane Width</label>
+        {{ choice('lane_width', [(0, 'Narrow'), (1, 'Medium'), (2, 'Wide')]) }}
       </div>
 
       <div class="field">
-        <label>Traffic Density</label>
-        <!-- High = risky -->
-        <select name="traffic_density">
-          <option value="0">Low</option>
-          <option value="1">Medium</option>
-          <option value="2">High</option>
-        </select>
+        <label for="traffic_density">Traffic Density</label>
+        {{ choice('traffic_density', [(0, 'Low'), (1, 'Medium'), (2, 'High')]) }}
       </div>
     </div>
 
     <div class="actions">
       <button type="submit" class="primary-btn">
-        Predict Risk & Save
+        Predict Risk &amp; Save
       </button>
     </div>
 
     <p class="note">
-      The AI model evaluates road geometry and traffic conditions to predict accident risk.
+      The model scores road geometry and traffic conditions to estimate accident risk.
+      New segments start with no recorded accidents; they are added to the location
+      list so a prohibited time can be set.
     </p>
 
   </form>

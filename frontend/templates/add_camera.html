@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Add Camera</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='add_camera.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -11,7 +13,7 @@
   <header class="hero-header">
     <h1>Add New Camera</h1>
     <p>Smart Transportation System – AI Safety Intelligence</p>
-    <a href="{{ url_for('admin_dashboard') }}">← Back to Admin Dashboard</a>
+    <a href="{{ url_for('camera_management.manage_cameras') }}">← Back to Cameras</a>
   </header>
 
   <main class="content">
@@ -19,23 +21,40 @@
       <h2>Add Camera</h2>
       <p class="subtitle">Register a new surveillance camera</p>
 
+      {% if error %}<div class="form-error">{{ error }}</div>{% endif %}
+
       <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="form-group">
-          <label>Camera Name</label>
-          <input type="text" name="name" placeholder="Camera Name" required>
+          <label for="name">Camera Name</label>
+          <input type="text" id="name" name="name" placeholder="Camera Name"
+                 value="{{ form.get('name', '') }}" maxlength="80" required>
         </div>
 
         <div class="form-group">
-          <label>Location</label>
-          <input type="text" name="location" placeholder="Location" required>
+          <label for="location">Location</label>
+          <input type="text" id="location" name="location" placeholder="Location"
+                 value="{{ form.get('location', '') }}" maxlength="80" required>
         </div>
 
         <div class="form-group">
-          <label>Status</label>
-          <select name="status">
-            <option value="ONLINE">ONLINE</option>
-            <option value="OFFLINE">OFFLINE</option>
+          <label for="zone">Zone <span class="muted">(optional)</span></label>
+          <input type="text" id="zone" name="zone" placeholder="e.g. Main Gate Road"
+                 value="{{ form.get('zone', '') }}" maxlength="80">
+        </div>
+
+        <div class="form-group">
+          <label for="coverage">Coverage <span class="muted">(optional)</span></label>
+          <input type="text" id="coverage" name="coverage" placeholder="e.g. Entry lane"
+                 value="{{ form.get('coverage', '') }}" maxlength="120">
+        </div>
+
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            <option value="ONLINE" {{ 'selected' if form.get('status', 'ONLINE') == 'ONLINE' }}>ONLINE</option>
+            <option value="OFFLINE" {{ 'selected' if form.get('status') == 'OFFLINE' }}>OFFLINE</option>
           </select>
         </div>
 
@@ -53,7 +72,6 @@
   </footer>
 
 </div>
-
 
 </body>
 </html>

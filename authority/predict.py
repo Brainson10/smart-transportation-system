@@ -1,54 +1,57 @@
-import sqlite3
+"""
+Accident-risk scoring for road segments.
+
+The model predicts an expected accident count from road features. The value
+stored in predictions.confidence (shown as "Risk score") is that prediction
+scaled to 0-100 -- it is NOT a statistical confidence, and the UI no longer
+labels it as one.
+
+The model is loaded lazily, so importing this module (which app.py does) no
+longer reads model.pkl at import time.
+"""
+
+import logging
+import threading
+
 import joblib
 import pandas as pd
 
-from config import AUTHORITY_DB, AUTHORITY_MODEL
+import config
+from backend.db import authority_db
 
-# =================================================
-# PATH CONFIG
-# =================================================
-DB_PATH = AUTHORITY_DB
-MODEL_PATH = AUTHORITY_MODEL
+log = logging.getLogger(__name__)
 
-# =================================================
-# LOAD MODEL (ONCE)
-# =================================================
-model = joblib.load(MODEL_PATH)
+FEATURES = ["curve", "junction", "visibility", "lane_width", "traffic_density"]
+SCORE_SCALE = 8.0   # predicted accidents that map to a risk score of 100
 
-# =================================================
-# HELPER: SCORE → RISK LABEL
-# =================================================
+_model = None
+_model_lock = threading.Lock()
+
+
+def get_model():
+    global _model
+    with _model_lock:
+        if _model is None:
+            _model = joblib.load(config.AUTHORITY_MODEL)
+        return _model
+
+
+def reload_model():
+    """Drop the cached model so the next prediction reads model.pkl again."""
+    global _model
+    with _model_lock:
+        _model = None
+
+
 def score_to_risk(score):
     if score >= 5:
         return "HIGH"
-    elif score >= 2:
+    if score >= 2:
         return "MEDIUM"
-    else:
-        return "LOW"
+    return "LOW"
 
-# =================================================
-# SINGLE ROAD PREDICTION (USED BY ADD ROAD)
-# =================================================
-def predict_single_road(curve, junction, visibility, lane_width, traffic_density):
-    """
-    Predict risk for ONE road segment using form input
-    """
 
-    X_input = pd.DataFrame(
-        [[curve, junction, visibility, lane_width, traffic_density]],
-        columns=[
-            "curve",
-            "junction",
-            "visibility",
-            "lane_width",
-            "traffic_density"
-        ]
-    )
-
-    score = model.predict(X_input)[0]
-    confidence = min(100, int((score / 8) * 100))
-    predicted_risk = score_to_risk(score)
-
+def _explain(curve, junction, visibility, lane_width, traffic_density):
     reasons = []
     if curve == 1:
         reasons.append("Curved road")
@@ -60,82 +63,53 @@ def predict_single_road(curve, junction, visibility, lane_width, traffic_density
         reasons.append("Narrow lane")
     if traffic_density == 2:
         reasons.append("High traffic density")
+    return ", ".join(reasons) if reasons else "Normal road conditions"
 
-    explanation = ", ".join(reasons) if reasons else "Normal road conditions"
 
-    return predicted_risk, confidence, explanation
+def _score(features):
+    """features: dict or 5-tuple in FEATURES order -> (risk_label, risk_score, raw)."""
+    values = [int(features[name]) for name in FEATURES] if isinstance(features, dict) \
+        else [int(v) for v in features]
+    raw = float(get_model().predict(pd.DataFrame([values], columns=FEATURES))[0])
+    risk_score = max(0, min(100, int(round(raw / SCORE_SCALE * 100))))
+    return score_to_risk(raw), risk_score, raw
 
-# =================================================
-# BULK PREDICTION (USED BY RUN AI BUTTON)
-# =================================================
+
+def predict_single_road(curve, junction, visibility, lane_width, traffic_density):
+    """Score one segment (used by Add Road). Returns (risk, risk_score, explanation)."""
+    features = (curve, junction, visibility, lane_width, traffic_density)
+    risk, risk_score, _ = _score(features)
+    return risk, risk_score, _explain(*[int(v) for v in features])
+
+
 def run_predictions():
-    """
-    Predict risk for ALL stored road data
-    """
+    """Re-score every segment in accident_data (used by the Run AI button)."""
+    with authority_db() as conn:
+        rows = conn.execute(f"""
+            SELECT segment, {", ".join(FEATURES)}, accident_count
+            FROM accident_data
+        """).fetchall()
 
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+        results = []
+        for row in rows:
+            features = [int(row[name] if row[name] is not None else 1) for name in FEATURES]
+            risk, risk_score, _ = _score(features)
+            results.append((row["segment"], risk, _explain(*features), risk_score,
+                            *features, row["accident_count"]))
 
-    # Clear old predictions
-    cur.execute("DELETE FROM predictions")
+        with conn:
+            conn.execute("DELETE FROM predictions")
+            conn.executemany(f"""
+                INSERT INTO predictions
+                (segment, predicted_risk, explanation, confidence,
+                 {", ".join(FEATURES)}, accident_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, results)
 
-    # Fetch road features
-    cur.execute("""
-        SELECT
-            segment,
-            curve,
-            junction,
-            visibility,
-            lane_width,
-            traffic_density
-        FROM accident_data
-    """)
-    rows = cur.fetchall()
+    log.info("risk predictions generated for %d segment(s)", len(results))
+    return len(results)
 
-    for segment, curve, junction, visibility, lane_width, traffic_density in rows:
 
-        X_input = pd.DataFrame(
-            [[curve, junction, visibility, lane_width, traffic_density]],
-            columns=[
-                "curve",
-                "junction",
-                "visibility",
-                "lane_width",
-                "traffic_density"
-            ]
-        )
-
-        score = model.predict(X_input)[0]
-        confidence = min(100, int((score / 8) * 100))
-        predicted_risk = score_to_risk(score)
-
-        reasons = []
-        if curve == 1:
-            reasons.append("Curved road")
-        if junction == 1:
-            reasons.append("Junction present")
-        if visibility == 0:
-            reasons.append("Low visibility")
-        if lane_width == 0:
-            reasons.append("Narrow lane")
-        if traffic_density == 2:
-            reasons.append("High traffic density")
-
-        explanation = ", ".join(reasons) if reasons else "Normal road conditions"
-
-        cur.execute("""
-            INSERT INTO predictions
-            (segment, predicted_risk, explanation, confidence)
-            VALUES (?, ?, ?, ?)
-        """, (segment, predicted_risk, explanation, confidence))
-
-    conn.commit()
-    conn.close()
-
-    print("AI predictions generated and stored successfully")
-
-# =================================================
-# ALLOW DIRECT RUN (OPTIONAL)
-# =================================================
 if __name__ == "__main__":
+    config.setup_logging()
     run_predictions()

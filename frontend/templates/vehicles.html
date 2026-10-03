@@ -1,11 +1,12 @@
+{% from "_pagination.html" import pager %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Vehicle Management</title>
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='vehicles.css') }}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vehicles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='common.css') }}">
 </head>
 <body>
 
@@ -27,54 +28,70 @@
     </div>
   </header>
 
+  {% include "_flash.html" %}
+
   <!-- ================= CONTENT ================= -->
   <main class="content">
     <section class="vehicle-section">
       <h2>Registered Vehicles</h2>
 
+      <form method="GET" class="list-toolbar">
+        <input type="search" name="q" value="{{ q }}" placeholder="Search plate, e.g. MN01">
+        <button type="submit">Search</button>
+        {% if q %}<a href="{{ url_for('vehicle.manage_vehicles') }}">Clear</a>{% endif %}
+      </form>
+      <p class="list-meta">{{ total }} vehicle{{ '' if total == 1 else 's' }}{% if q %} matching "{{ q }}"{% endif %}</p>
+
       {% if vehicles|length == 0 %}
-        <p style="opacity:0.6;">No vehicles registered.</p>
+        <p style="opacity:0.6;">No vehicles {{ 'match that search' if q else 'registered' }}.</p>
       {% endif %}
 
       {% for v in vehicles %}
       <div class="vehicle-card">
 
-        <!-- Vehicle Info -->
-
         <div class="vehicle-info">
           <h3>{{ v.number }}</h3>
           <p>
-            {{ v.owner }} · {{ v.type }} {{ v.role }} <br>
-           <strong>{{ v.phone }}</strong>
+            {{ v.owner }} · {{ v.type }} · {{ v.role }} <br>
+            <strong>{{ v.phone }}</strong>
           </p>
-
-
           <p class="violation-text">
-             Violations: <strong>{{ v.violation_count }}</strong>
+            Violations: <strong>{{ v.violation_count or 0 }}</strong>
           </p>
         </div>
 
-
-
-        <!-- Vehicle Actions -->
         <div class="vehicle-actions">
+          <span class="status {{ (v.status or '')|lower }}">{{ v.status }}</span>
 
-          <!-- DELETE -->
-          <a href="{{ url_for('vehicle.delete_vehicle', vehicle_id=v.id) }}"
-             class="btn danger small"
-             onclick="return confirm('Delete this vehicle?');">
-            Delete
-          </a>
+          <!-- BLOCK / UNBLOCK: the gate denies BLOCKED vehicles -->
+          <form method="POST" class="inline-form"
+                action="{{ url_for('vehicle.toggle_vehicle_status', vehicle_id=v.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page" value="{{ page }}">
+            <input type="hidden" name="q" value="{{ q }}">
+            <button type="submit" class="btn outline small" style="color:#1e293b;border-color:#cbd5e1;">
+              {{ 'Block' if v.status == 'ACTIVE' else 'Unblock' }}
+            </button>
+          </form>
 
+          <!-- DELETE (POST only) -->
+          <form method="POST" class="inline-form"
+                action="{{ url_for('vehicle.delete_vehicle', vehicle_id=v.id) }}"
+                onsubmit="return confirm('Delete {{ v.number }}? Its violation history is kept.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page" value="{{ page }}">
+            <input type="hidden" name="q" value="{{ q }}">
+            <button type="submit" class="btn danger small">Delete</button>
+          </form>
         </div>
 
       </div>
       {% endfor %}
 
+      {{ pager('vehicle.manage_vehicles', page, pages, {'q': q or None}) }}
     </section>
   </main>
 
-  <!-- ================= FOOTER ================= -->
   <footer class="footer">
     © 2026 Smart Transportation System | Academic Demo
   </footer>
