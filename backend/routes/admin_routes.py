@@ -1,10 +1,12 @@
 from urllib.parse import urlparse
 
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from backend.auth import (login_admin, login_throttle, logout, throttle_key,
-                          verify_password)
+from backend.auth import (admin_required, hash_password, login_admin, login_throttle,
+                          logout, throttle_key, verify_password)
 from backend.db import vehicle_db
+
+MIN_PASSWORD_LENGTH = 8
 
 
 admin_bp = Blueprint("admin", __name__)
@@ -57,3 +59,37 @@ def admin_login():
 def admin_logout():
     logout()
     return redirect(url_for("admin.admin_login"))
+
+
+@admin_bp.route("/admin/account", methods=["GET", "POST"])
+@admin_required
+def account():
+    """Change the signed-in admin's password (the seeded one is admin123)."""
+    username = session.get("admin_username")
+    if request.method == "POST":
+        current = request.form.get("current_password") or ""
+        new = request.form.get("new_password") or ""
+        confirm = request.form.get("confirm_password") or ""
+
+        with vehicle_db() as conn:
+            admin = conn.execute("SELECT id, password FROM admins WHERE username = ?",
+                                 (username,)).fetchone()
+            error = None
+            if not admin or not verify_password(admin["password"], current):
+                error = "Current password is incorrect."
+            elif len(new) < MIN_PASSWORD_LENGTH:
+                error = f"New password must be at least {MIN_PASSWORD_LENGTH} characters."
+            elif new != confirm:
+                error = "New passwords do not match."
+            elif new == current:
+                error = "New password must differ from the current one."
+            if error:
+                return render_template("account.html", username=username, error=error), 400
+            with conn:
+                conn.execute("UPDATE admins SET password = ? WHERE id = ?",
+                             (hash_password(new), admin["id"]))
+        flash("Password changed.")
+        return redirect(url_for("admin.account"))
+
+    return render_template("account.html", username=username,
+                           min_length=MIN_PASSWORD_LENGTH)

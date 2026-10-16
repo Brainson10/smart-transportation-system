@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Locations · Smart Transportation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body><div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('admin_dashboard') }}"><span class="brand-mark">ST</span><span><span class="brand-name">Smart Transport</span><br><span class="brand-sub">Administration</span></span></a>
+    <nav class="nav"><span class="nav-label">Operations</span>
+      <a href="{{ url_for('admin_dashboard') }}">Dashboard</a><a href="{{ url_for('events.gate_activity') }}">Gate activity</a>
+      <a href="{{ url_for('violation.view_violations') }}">Violations</a><a class="active" href="{{ url_for('manage_locations') }}">Locations</a>
+      <a href="{{ url_for('camera_management.manage_cameras') }}">Cameras</a><a href="{{ url_for('manage_roads') }}">Road risk</a><a href="{{ url_for('system.system') }}">System</a>
+    </nav>
+  </aside>
+  <main class="main"><div class="content">
+    <header class="page-header"><div><div class="breadcrumb"><a href="{{ url_for('admin_dashboard') }}">Admin</a> / Locations</div><h1>Gate locations</h1><p>Manage access locations and their restricted entry windows.</p></div><div class="page-actions"><a class="btn" href="{{ url_for('add_location') }}">Add location</a></div></header>
+    {% include "_flash.html" %}
+    <section class="grid grid-auto">
+      {% for loc in locations %}
+      <article class="card"><div class="card-body">
+        <div class="spread"><h2>{{ loc.name }}</h2><span class="badge {{ 'badge-danger' if loc.violations else 'badge-muted' }}">{{ loc.violations }} violations</span></div>
+        <p class="muted mt-1">{% if loc.start and loc.end %}Restricted {{ loc.start }}–{{ loc.end }}{% else %}No prohibited window{% endif %}</p>
+        {% if loc.restricted_now %}<p class="text-danger mt-1">Restriction is active now</p>{% endif %}
+        <div class="row mt-2"><a class="btn" href="{{ url_for('edit_prohibited_time', segment=loc.name) }}">Edit time</a>
+          <form method="post" action="{{ url_for('delete_location', location_id=loc.id) }}" onsubmit="return confirm('Delete {{ loc.name }}? Gate operators will no longer be able to sign in to it.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </div></article>
+      {% else %}<div class="card"><div class="card-body muted">No locations have been added.</div></div>{% endfor %}
+    </section>
+  </div><footer class="site-footer">Smart Transportation System · Academic demo</footer></main>
+</div></body></html>

@@ -72,7 +72,9 @@ VEHICLE_SCHEMA = [
         status TEXT,
         role TEXT,
         violation_count INTEGER DEFAULT 0,
-        phone TEXT
+        phone TEXT,
+        valid_until TEXT,
+        notes TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS locations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,15 +89,44 @@ VEHICLE_SCHEMA = [
         vehicle_number TEXT,
         location TEXT,
         violation_type TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        event_id INTEGER,
+        status TEXT DEFAULT 'OPEN'
     )""",
     """CREATE TABLE IF NOT EXISTS admins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
         password TEXT
     )""",
+    # Every gate decision (ALLOW / DENY / MANUAL CHECK), not just violations, so
+    # admins can audit the gate and see the evidence behind each call.
+    # decision is what the rules said; final_decision what the operator settled
+    # on (NULL = accepted as is). created_at is UTC, like violations.timestamp.
+    """CREATE TABLE IF NOT EXISTS gate_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        gate TEXT,
+        plate TEXT,
+        raw_text TEXT,
+        confidence INTEGER,
+        decision TEXT,
+        reason TEXT,
+        final_decision TEXT,
+        source TEXT DEFAULT 'auto',
+        operator TEXT,
+        suggested_plate TEXT,
+        evidence_path TEXT,
+        crop_path TEXT,
+        sms_sent INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""",
+    """CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )""",
     "CREATE INDEX IF NOT EXISTS idx_violations_location ON violations(location)",
     "CREATE INDEX IF NOT EXISTS idx_violations_timestamp ON violations(timestamp)",
+    "CREATE INDEX IF NOT EXISTS idx_gate_events_created ON gate_events(created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_gate_events_gate ON gate_events(gate)",
 ]
 
 AUTHORITY_SCHEMA = [
@@ -123,21 +154,29 @@ AUTHORITY_SCHEMA = [
         traffic_density INTEGER,
         accident_count INTEGER
     )""",
+    # source: webcam index, video file or rtsp:// URL that feeds the gate named
+    # in `location`. NULL means the global ANPR_CAMERA_SOURCE.
     """CREATE TABLE IF NOT EXISTS cameras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         location TEXT,
         zone TEXT,
         status TEXT,
-        coverage TEXT
+        coverage TEXT,
+        source TEXT
     )""",
 ]
 
 # Columns that were added to older DBs over time with ALTER TABLE.
 VEHICLE_COLUMNS = {
-    "vehicles": [("role", "TEXT"), ("violation_count", "INTEGER DEFAULT 0"), ("phone", "TEXT")],
+    # valid_until: YYYY-MM-DD pass expiry (visitors); NULL = no expiry.
+    "vehicles": [("role", "TEXT"), ("violation_count", "INTEGER DEFAULT 0"), ("phone", "TEXT"),
+                 ("valid_until", "TEXT"), ("notes", "TEXT")],
+    # status: OPEN | WAIVED. event_id links to the gate_events row (evidence).
+    "violations": [("event_id", "INTEGER"), ("status", "TEXT DEFAULT 'OPEN'")],
 }
 AUTHORITY_COLUMNS = {
+    "cameras": [("source", "TEXT")],
     "accident_data": [("lane_width", "INTEGER DEFAULT 1"), ("traffic_density", "INTEGER DEFAULT 1")],
     "predictions": [("confidence", "INTEGER"), ("curve", "INTEGER"), ("junction", "INTEGER"),
                     ("visibility", "INTEGER"), ("lane_width", "INTEGER"),

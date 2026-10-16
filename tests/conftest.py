@@ -29,13 +29,24 @@ def data_env(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "BACKUP_DIR", tmp_path / "backups")
     monkeypatch.setattr(sms, "LOG_DIR", tmp_path / "logs")
     monkeypatch.setattr(sms, "SMS_LOG_FILE", tmp_path / "logs" / "sms_logs.txt")
+    monkeypatch.setattr(config, "DETECTION_DIR", tmp_path / "detections")
     db.init_databases()
 
     auth.login_throttle.reset()
-    decision.set_paused(False)
-    decision.update_latest_result({})
+    decision.reset_all()
+    _reset_cooldowns()
     yield tmp_path
-    decision.set_paused(False)
+    decision.reset_all()
+    _reset_cooldowns()
+
+
+def _reset_cooldowns():
+    import sys
+    camera = sys.modules.get("gate.camera")   # only loaded by app-level tests
+    if camera is not None:
+        camera.reset_detection_state()
+        for state in list(camera._STATES.values()):
+            state.recent.clear()
 
 
 @pytest.fixture(scope="session")

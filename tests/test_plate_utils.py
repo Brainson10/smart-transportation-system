@@ -69,3 +69,42 @@ def test_is_valid_plate():
     assert is_valid_plate("22BH1234AB")
     assert not is_valid_plate("MNOSAB1234")   # needs repair first
     assert not is_valid_plate("")
+
+
+# ---------------- near-match suggestions ----------------
+from gate.plate_utils import find_near_match, mask_source  # noqa: E402
+
+REGISTERED = ["MN01AB1234", "MN01CD5678", "UP19EQ1001"]
+
+
+@pytest.mark.parametrize("read,expected", [
+    ("MN01AB1284", "MN01AB1234"),     # 3 -> 8, a classic OCR confusion
+    ("MN01A81234", "MN01AB1234"),     # B -> 8
+    ("MN01AB234", "MN01AB1234"),      # one glyph dropped
+    ("MN01CD5679", "MN01CD5678"),     # non-confusable substitution still suggested
+    ("KA09ZZ9999", None),             # nothing close
+    ("MN01AB1234", None),             # exact match is not a "near" match
+    ("", None),
+])
+def test_find_near_match(read, expected):
+    assert find_near_match(read, REGISTERED) == expected
+
+
+def test_near_match_refuses_to_guess_between_equal_candidates():
+    assert find_near_match("MN01AB1230", ["MN01AB1231", "MN01AB1239"]) is None
+
+
+def test_confusable_substitution_beats_an_arbitrary_one():
+    # 8 vs B is a known confusion; 8 vs X is not.
+    assert find_near_match("MN01A81234", ["MN01AB1234", "MN01AX1234"]) == "MN01AB1234"
+
+
+@pytest.mark.parametrize("source,expected", [
+    ("rtsp://admin:s3cret@10.0.0.5:554/stream1", "rtsp://admin:***@10.0.0.5:554/stream1"),
+    ("rtsp://10.0.0.5/stream", "rtsp://10.0.0.5/stream"),
+    ("samples/gate.mp4", "samples/gate.mp4"),
+    (0, "0"),
+    (None, ""),
+])
+def test_mask_source_hides_camera_passwords(source, expected):
+    assert mask_source(source) == expected

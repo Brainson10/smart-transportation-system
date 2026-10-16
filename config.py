@@ -123,6 +123,32 @@ BOX_PAD_RATIO = _env_float("ANPR_BOX_PAD_RATIO", 0.04)
 MIN_PLATE_AREA = _env_int("ANPR_MIN_PLATE_AREA", 900)
 MIN_PLATE_WIDTH = _env_int("ANPR_MIN_PLATE_WIDTH", 60)
 
+
+def parse_roi(text):
+    """'x1,y1,x2,y2' as fractions of the frame -> tuple, or None (whole frame)."""
+    try:
+        values = tuple(float(v) for v in str(text or "").split(","))
+    except ValueError:
+        return None
+    if len(values) != 4:
+        return None
+    x1, y1, x2, y2 = (min(1.0, max(0.0, v)) for v in values)
+    if x2 <= x1 or y2 <= y1:
+        return None
+    return (x1, y1, x2, y2)
+
+
+# Detection region: plates whose box centre falls outside it are ignored, so a
+# car parked in the background is never read. Unset means the whole frame.
+ROI = parse_roi(os.environ.get("ANPR_ROI"))
+
+# Edge sharpness of the crop (gate/anpr.py sharpness(), ~0-300). Below this a
+# crop is blurred mush: OCR on it only produces confident-looking garbage. 0
+# disables the check. Tune with tools/anpr_probe.py, which prints it per box.
+MIN_SHARPNESS = _env_float("ANPR_MIN_SHARPNESS", 8.0)
+# width/height below this is treated as a two-line (square) plate, as on bikes.
+TWO_LINE_ASPECT = _env_float("ANPR_TWO_LINE_ASPECT", 2.2)
+
 # =================================================
 # DETECTION TRIGGER
 # -------------------------------------------------
@@ -170,12 +196,20 @@ VOTE_THRESHOLD = _env_float("ANPR_VOTE_THRESHOLD", 2.0)
 VOTE_MIN_SIGHTINGS = _env_int("ANPR_VOTE_MIN_SIGHTINGS", 2)
 VOTE_MERGE_DISTANCE = _env_int("ANPR_VOTE_MERGE_DISTANCE", 1)
 
+# After a decision, the same plate at the same gate is ignored for this many
+# seconds. Without it a car still in view after "Next Vehicle" locks again at
+# once: a second violation, a second SMS.
+REPEAT_COOLDOWN = _env_float("ANPR_REPEAT_COOLDOWN", 45.0)
+
 # =================================================
 # EVIDENCE + LOGGING
 # =================================================
 SAVE_DETECTION_CROPS = _env_bool("ANPR_SAVE_CROPS", True)
 DETECTION_DIR = LOG_DIR / "detections"
 LOG_LEVEL = _env_str("ANPR_LOG_LEVEL", "INFO")
+# Per-frame engine/vote text on the video. The gate console shows the same
+# numbers as HTML, so the stream stays clean by default.
+DEBUG_OVERLAY = _env_bool("ANPR_DEBUG_OVERLAY", False)
 
 
 def setup_logging():

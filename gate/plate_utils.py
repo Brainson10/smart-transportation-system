@@ -206,7 +206,7 @@ def fuse_confidence(det_conf, ocr_conf, fmt_score, substitutions=0):
     return int(round(100 * max(0.0, min(raw, 1.0))))
 
 
-def _hamming1(a, b):
+def hamming1(a, b):
     """True when two equal-length strings differ in at most one position."""
     if len(a) != len(b):
         return False
@@ -219,6 +219,9 @@ def _hamming1(a, b):
     return diff <= 1
 
 
+_hamming1 = hamming1   # old private name
+
+
 class PlateVoter:
     """
     Confidence-weighted votes inside a rolling time window.
@@ -226,18 +229,39 @@ class PlateVoter:
     Replaces `PLATE_VOTES = defaultdict(int)` with VOTE_THRESHOLD = 2, which had
     no expiry at all: a plate seen once now and once ten minutes later would lock
     the gate, and counts from one vehicle leaked into the next.
+
+    Each sighting keeps the exact text that was read, so a lock is resolved by a
+    per-character weighted majority (consensus) rather than by whichever spelling
+    happened to arrive first and became the key.
+
+    window / threshold / min_sightings fall back to `config` at call time, so the
+    admin System page can retune them without restarting the worker.
     """
 
     def __init__(self, window=None, threshold=None, min_sightings=None,
                  merge_distance=None, time_fn=time.monotonic):
-        self.window = config.VOTE_WINDOW if window is None else window
-        self.threshold = config.VOTE_THRESHOLD if threshold is None else threshold
-        self.min_sightings = (config.VOTE_MIN_SIGHTINGS
-                              if min_sightings is None else min_sightings)
-        self.merge_distance = (config.VOTE_MERGE_DISTANCE
-                               if merge_distance is None else merge_distance)
+        self._window = window
+        self._threshold = threshold
+        self._min_sightings = min_sightings
+        self._merge_distance = merge_distance
         self._time = time_fn
-        self._votes = {}   # plate -> list[(timestamp, weight)]
+        self._votes = {}   # key -> list[(timestamp, weight, plate_as_read)]
+
+    @property
+    def window(self):
+        return config.VOTE_WINDOW if self._window is None else self._window
+
+    @property
+    def threshold(self):
+        return config.VOTE_THRESHOLD if self._threshold is None else self._threshold
+
+    @property
+    def min_sightings(self):
+        return config.VOTE_MIN_SIGHTINGS if self._min_sightings is None else self._min_sightings
+
+    @property
+    def merge_distance(self):
+        return config.VOTE_MERGE_DISTANCE if self._merge_distance is None else self._merge_distance
 
     def _expire(self, now):
         cutoff = now - self.window
@@ -248,33 +272,58 @@ class PlateVoter:
             else:
                 del self._votes[plate]   # bounded memory, unlike the old dict
 
+    @staticmethod
+    def _weight(votes):
+        return sum(v[1] for v in votes)
+
     def _merge_key(self, plate):
         """Fold a read differing by a single glyph into the heavier existing key."""
         if self.merge_distance < 1 or plate in self._votes:
             return plate
         best, best_weight = plate, -1.0
         for known, votes in self._votes.items():
-            if _hamming1(known, plate):
-                weight = sum(w for _, w in votes)
+            if hamming1(known, plate):
+                weight = self._weight(votes)
                 if weight > best_weight:
                     best, best_weight = known, weight
         return best
 
+    def consensus(self, key):
+        """
+        Per-position weighted majority over the sightings merged under `key`.
+
+        If MN05AB1239 arrived first (and became the key) and MN05AB1234 was then
+        read twice, the key alone would lock the misread; the consensus picks
+        '4' for the last glyph. Falls back to the key if the result is not a
+        valid plate.
+        """
+        votes = [v for v in self._votes.get(key, []) if len(v[2]) == len(key)]
+        if not votes:
+            return key
+        chars = []
+        for index in range(len(key)):
+            tally = {}
+            for _, weight, plate in votes:
+                tally[plate[index]] = tally.get(plate[index], 0.0) + weight
+            chars.append(max(sorted(tally), key=lambda c: tally[c]))
+        text = "".join(chars)
+        return text if is_valid_plate(text) else key
+
     def add(self, plate, confidence):
-        """Record a sighting; return the plate once it is locked, else None."""
+        """Record a sighting; return the (consensus) plate once locked, else None."""
         if not plate:
             return None
         now = self._time()
         self._expire(now)
 
         key = self._merge_key(plate)
-        self._votes.setdefault(key, []).append((now, max(0.0, confidence) / 100.0))
+        self._votes.setdefault(key, []).append((now, max(0.0, confidence) / 100.0, plate))
 
         votes = self._votes[key]
         # Both gates matter: weight stops low-confidence noise, min_sightings
         # stops a single lucky high-confidence frame from locking on its own.
-        if sum(w for _, w in votes) >= self.threshold and len(votes) >= self.min_sightings:
-            return key
+        if self._weight(votes) >= self.threshold and len(votes) >= self.min_sightings:
+            return self.consensus(key)
         return None
 
     def best(self):
@@ -282,16 +331,150 @@ class PlateVoter:
         self._expire(now)
         if not self._votes:
             return None, 0.0
-        plate = max(self._votes, key=lambda p: sum(w for _, w in self._votes[p]))
-        return plate, sum(w for _, w in self._votes[plate])
+        plate = max(self._votes, key=lambda p: self._weight(self._votes[p]))
+        return plate, self._weight(self._votes[plate])
+
+    def leader(self):
+        """The plate closest to locking, for the gate console's progress bar."""
+        plate, weight = self.best()
+        if plate is None:
+            return None
+        return {
+            "plate": self.consensus(plate),
+            "weight": round(weight, 2),
+            "threshold": self.threshold,
+            "sightings": len(self._votes[plate]),
+            "min_sightings": self.min_sightings,
+            "progress": round(min(1.0, weight / self.threshold) if self.threshold else 1.0, 2),
+        }
 
     def snapshot(self):
         """Current tallies, for the debug overlay."""
         self._expire(self._time())
-        return {p: round(sum(w for _, w in v), 2) for p, v in self._votes.items()}
+        return {p: round(self._weight(v), 2) for p, v in self._votes.items()}
 
     def reset(self):
         self._votes.clear()
+
+
+class RecentPlates:
+    """
+    Plates already decided at one gate, ignored until their cooldown ends.
+
+    A plate one glyph away from a cooling plate is treated as the same vehicle:
+    otherwise a single misread frame would slip past and re-decide it.
+    """
+
+    def __init__(self, cooldown=None, time_fn=time.monotonic):
+        self._cooldown = cooldown
+        self._time = time_fn
+        self._seen = {}   # plate -> decided-at timestamp
+
+    @property
+    def cooldown(self):
+        return config.REPEAT_COOLDOWN if self._cooldown is None else self._cooldown
+
+    def _expire(self, now):
+        for plate in [p for p, ts in self._seen.items() if now - ts >= self.cooldown]:
+            del self._seen[plate]
+
+    def add(self, plate):
+        if plate:
+            self._seen[plate] = self._time()
+
+    def remaining(self, plate):
+        """Seconds until `plate` may be decided again; 0 when it is not cooling."""
+        if not plate:
+            return 0.0
+        now = self._time()
+        self._expire(now)
+        matches = [ts for known, ts in self._seen.items()
+                   if known == plate or hamming1(known, plate)]
+        if not matches:
+            return 0.0
+        return max(0.0, self.cooldown - (now - max(matches)))
+
+    def snapshot(self):
+        now = self._time()
+        self._expire(now)
+        return {p: round(self.cooldown - (now - ts), 1) for p, ts in self._seen.items()}
+
+    def clear(self):
+        self._seen.clear()
+
+
+# =================================================
+# NEAR-MATCH AGAINST THE REGISTRY
+# -------------------------------------------------
+# Pairs OCR genuinely confuses. A registered plate that differs from the read
+# by one of these is a much more likely misread than an arbitrary difference.
+# =================================================
+CONFUSABLE = frozenset(
+    {frozenset(pair) for pair in list(LETTER_FIXES.items()) + list(DIGIT_FIXES.items())}
+    | {frozenset(pair) for pair in ("OD", "OQ", "DQ", "EF", "MN", "HN", "VW", "UV",
+                                     "CG", "PR", "KX", "38", "68", "69", "17")}
+)
+
+
+def _edit_distance1(a, b):
+    """
+    None if a and b are more than one edit apart, else (kind, confusable):
+    kind is 'same' | 'sub' | 'indel'.
+    """
+    if a == b:
+        return "same", True
+    if len(a) == len(b):
+        diffs = [(x, y) for x, y in zip(a, b) if x != y]
+        if len(diffs) != 1:
+            return None
+        return "sub", frozenset(diffs[0]) in CONFUSABLE
+    if abs(len(a) - len(b)) != 1:
+        return None
+    short, long_ = (a, b) if len(a) < len(b) else (b, a)
+    for index in range(len(long_)):
+        if long_[:index] + long_[index + 1:] == short:
+            return "indel", False
+    return None
+
+
+def find_near_match(plate, registered):
+    """
+    The registered plate a read most plausibly was, or None.
+
+    Only ever a SUGGESTION for the operator (the gate routes it to MANUAL CHECK):
+    silently snapping to it could admit the wrong vehicle.
+    """
+    plate = clean_ocr_text(plate)
+    if not plate:
+        return None
+    ranked = []
+    for candidate in registered:
+        candidate = clean_ocr_text(candidate)
+        result = _edit_distance1(plate, candidate)
+        if result is None or result[0] == "same":
+            continue
+        kind, confusable = result
+        # Confusable substitutions first, then any substitution, then indels.
+        rank = 0 if (kind == "sub" and confusable) else 1 if kind == "sub" else 2
+        ranked.append((rank, candidate))
+    if not ranked:
+        return None
+    ranked.sort()
+    best_rank = ranked[0][0]
+    top = [c for r, c in ranked if r == best_rank]
+    # Two equally good candidates: do not guess between them.
+    return top[0] if len(top) == 1 else None
+
+
+# =================================================
+# DISPLAY
+# =================================================
+_CREDENTIALS_RE = re.compile(r"^([a-z][a-z0-9+.-]*://)([^:/@]+):([^@/]+)@", re.IGNORECASE)
+
+
+def mask_source(source):
+    """rtsp://user:secret@host -> rtsp://user:***@host, for screens and logs."""
+    return _CREDENTIALS_RE.sub(r"\1\2:***@", str(source if source is not None else ""))
 
 
 # Backwards-compatible alias: camera.normalize_vehicle_number used to live here.

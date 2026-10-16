@@ -23,6 +23,7 @@ import time
 import cv2
 
 import config
+from gate.plate_utils import mask_source
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class CameraStream:
         self._thread = None
         self._opened = False
         self._frames = 0
+        self._fps = 0.0
         self._reconnects = 0
         self._last_error = None
 
@@ -67,7 +69,7 @@ class CameraStream:
             target=self._run, name=f"capture-{self.name}", daemon=True
         )
         self._thread.start()
-        log.info("capture[%s] started on source=%r", self.name, self.source)
+        log.info("capture[%s] started on source=%s", self.name, self.display_source)
         return self
 
     def stop(self):
@@ -76,6 +78,11 @@ class CameraStream:
             self._thread.join(timeout=2.0)
         with self._cond:
             self._cond.notify_all()
+
+    @property
+    def display_source(self):
+        """The source with any rtsp:// password masked, for screens and logs."""
+        return mask_source(self.source)
 
     # ---------- reading ----------
     def read(self, timeout=1.0):
@@ -111,10 +118,11 @@ class CameraStream:
     def stats(self):
         return {
             "name": self.name,
-            "source": str(self.source),
+            "source": self.display_source,
             "opened": self._opened,
             "healthy": self.is_healthy(),
             "frames": self._frames,
+            "fps": round(self._fps, 1),
             "reconnects": self._reconnects,
             "last_error": self._last_error,
             "age": round(time.monotonic() - self._last_frame_ts, 2) if self._last_frame_ts else None,
@@ -139,9 +147,15 @@ class CameraStream:
 
     def _publish(self, frame):
         with self._cond:
+            now = time.monotonic()
+            if self._last_frame_ts:
+                dt = now - self._last_frame_ts
+                if dt > 0:
+                    # Smoothed measured rate, shown on the gate console.
+                    self._fps = 1.0 / dt if not self._fps else 0.9 * self._fps + 0.1 / dt
             self._frame = frame
             self._seq += 1
-            self._last_frame_ts = time.monotonic()
+            self._last_frame_ts = now
             self._frames += 1
             self._cond.notify_all()
 
@@ -157,7 +171,7 @@ class CameraStream:
                 cap = self._open()
                 if cap is None:
                     self._opened = False
-                    self._last_error = f"cannot open source {self.source!r}"
+                    self._last_error = f"cannot open source {self.display_source}"
                     log.warning("capture[%s] %s; retrying in %.1fs",
                                 self.name, self._last_error, backoff)
                     self._stop.wait(backoff)
@@ -166,7 +180,7 @@ class CameraStream:
                 self._opened = True
                 self._last_error = None
                 backoff = config.CAMERA_RECONNECT_DELAY
-                log.info("capture[%s] opened source=%r", self.name, self.source)
+                log.info("capture[%s] opened source=%s", self.name, self.display_source)
 
             started = time.monotonic()
             ok, frame = cap.read()
@@ -219,6 +233,13 @@ def get_stream(name="default", source=None):
             stream = CameraStream(source=source, name=name)
             _STREAMS[key] = stream
         return stream.start()
+
+
+def peek_stream(source=None):
+    """The running stream for a source, or None. Never opens a device."""
+    key = str(config.resolve_camera_source(source))
+    with _LOCK:
+        return _STREAMS.get(key)
 
 
 def shutdown_all():

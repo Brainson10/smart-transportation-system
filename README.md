@@ -8,6 +8,9 @@ entry restrictions and SMS-style violation alerts along the way. An admin
 dashboard surfaces vehicles, violations, cameras and an accident-risk model for
 road segments.
 
+For a topic-by-topic learning guide covering the technologies and concepts in
+this project, see [PROJECT_LEARNING_GUIDE.md](PROJECT_LEARNING_GUIDE.md).
+
 **Demo video:** https://drive.google.com/file/d/1e7mGiu4BWBLlnO4YvMntVJKMfyfAjyiT/view?usp=drive_link
 
 > For the live demo / simulation, "CCTV" is the laptop's own webcam. The

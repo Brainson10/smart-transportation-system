@@ -34,7 +34,9 @@ def _report(index, result, elapsed_ms):
         print("  no plate boxes")
         return
     for det in result["detections"]:
-        print(f"  box={det.bbox} det_conf={det.det_conf:.3f}")
+        print(f"  box={det.bbox} det_conf={det.det_conf:.3f}  "
+              f"sharpness={det.sharpness:.1f}"
+              f"{'  BLURRY (below ANPR_MIN_SHARPNESS, OCR skipped)' if det.blurry else ''}")
         print(f"    raw={det.raw_text!r}  plate={det.plate}  variant={det.variant}")
         print(f"    ocr_conf={det.ocr_conf:.1f}  format={det.format_score:.2f}  "
               f"subs={det.substitutions}  FUSED={det.confidence}")

@@ -8,18 +8,20 @@ from werkzeug.exceptions import HTTPException
 
 import config
 from authority.predict import predict_single_road, run_predictions
-from backend import auth
+from backend import analytics, auth
 from backend.auth import admin_required, gate_api_required
 from backend.db import authority_db, init_databases, vehicle_db
 from backend.routes.admin_routes import admin_bp
 from backend.routes.camera_management_routes import camera_management_bp
+from backend.routes.event_routes import event_bp
 from backend.routes.gate_routes import gate_routes_bp
+from backend.routes.system_routes import system_bp
 from backend.routes.vehicle_routes import vehicle_bp
 from backend.routes.violation_routes import violation_bp
-from gate import capture
-from gate import decision   # noqa: F401  (registers pause/result state)
+from backend import settings
+from gate import camera
 from gate.camera import generate_frames
-from gate.decision import gate_bp
+from gate.decision import gate_bp, known_location
 
 config.setup_logging()
 log = logging.getLogger(__name__)
@@ -52,11 +54,14 @@ app.register_blueprint(camera_management_bp)
 app.register_blueprint(gate_routes_bp)
 app.register_blueprint(vehicle_bp)
 app.register_blueprint(violation_bp)
+app.register_blueprint(event_bp)
+app.register_blueprint(system_bp)
 app.register_blueprint(gate_bp, url_prefix="/gate")
 
 # Creates/upgrades both databases and seeds demo data into empty tables, so a
 # fresh clone (where *.db is gitignored) starts instead of crashing.
 init_databases()
+settings.apply_saved()      # admin-tuned thresholds from the System page
 
 
 # =================================================
@@ -120,6 +125,33 @@ def home():
 # =================================================
 # ADMIN DASHBOARD
 # =================================================
+def _location_overview(conn):
+    """Every gate/location with its violation count and prohibited window."""
+    # Case-insensitive, so 'academic block road' and 'Academic Block Road' count
+    # as one place. Waived violations do not count.
+    violation_counts = {row[0]: row[1] for row in conn.execute("""
+        SELECT LOWER(location), COUNT(*) FROM violations
+        WHERE COALESCE(status, 'OPEN') != 'WAIVED' GROUP BY LOWER(location)""")}
+    rows = conn.execute("""
+        SELECT id, name, prohibited_start, prohibited_end FROM locations
+        ORDER BY name COLLATE NOCASE
+    """).fetchall()
+    return [{
+        "id": row["id"], "name": row["name"],
+        "violations": violation_counts.get(row["name"].lower(), 0),
+        "start": to_12hr(row["prohibited_start"]), "end": to_12hr(row["prohibited_end"]),
+        "restricted_now": _restricted_now(row["prohibited_start"], row["prohibited_end"]),
+    } for row in rows]
+
+
+def _restricted_now(start, end):
+    from gate.decision import window_contains
+    try:
+        return window_contains(start, end, datetime.now().time())
+    except ValueError:
+        return False
+
+
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
@@ -129,22 +161,14 @@ def admin_dashboard():
 
         # Timestamps are stored in UTC; compare and display in local time.
         today_violations = conn.execute("""
-            SELECT vehicle_number, location, violation_type,
+            SELECT id, vehicle_number, location, violation_type, event_id,
                    datetime(timestamp, 'localtime') AS local_time
             FROM violations
             WHERE DATE(timestamp, 'localtime') = DATE('now', 'localtime')
             ORDER BY timestamp DESC
+            LIMIT 10
         """).fetchall()
-
-        # Case-insensitive, so 'academic block road' and 'Academic Block Road' count
-        # as one place.
-        violation_counts = {row[0]: row[1] for row in conn.execute(
-            "SELECT LOWER(location), COUNT(*) FROM violations GROUP BY LOWER(location)")}
-
-        location_rows = conn.execute("""
-            SELECT name, prohibited_start, prohibited_end FROM locations
-            ORDER BY name COLLATE NOCASE
-        """).fetchall()
+        locations = _location_overview(conn)
 
     with authority_db() as conn:
         total_cameras = _count(conn, "SELECT COUNT(*) FROM cameras")
@@ -162,15 +186,8 @@ def admin_dashboard():
 
     # Every gate and road: the overview used to list only AI road segments, so gate
     # locations (e.g. 'Academic Gate', 123 violations) never appeared.
-    overview, seen = [], set()
-    for row in location_rows:
-        seen.add(row["name"].lower())
-        overview.append((row["name"], violation_counts.get(row["name"].lower(), 0),
-                         to_12hr(row["prohibited_start"]), to_12hr(row["prohibited_end"])))
-    for segment in segments:
-        if segment.lower() not in seen:
-            seen.add(segment.lower())
-            overview.append((segment, violation_counts.get(segment.lower(), 0), None, None))
+    seen = {loc["name"].lower() for loc in locations}
+    road_only = [s for s in segments if s.lower() not in seen]
 
     return render_template(
         "admin.html",
@@ -181,8 +198,31 @@ def admin_dashboard():
         alerts=alerts,
         high_risk_roads=high_risk_roads,
         today_violations=today_violations,
-        locations=overview,
+        locations=locations,
+        road_only=road_only,
+        stats=analytics.dashboard(),
     )
+
+
+@app.route("/admin/locations")
+@admin_required
+def manage_locations():
+    with vehicle_db() as conn:
+        locations = _location_overview(conn)
+    return render_template("locations.html", locations=locations)
+
+
+@app.route("/admin/locations/<int:location_id>/delete", methods=["POST"])
+@admin_required
+def delete_location(location_id):
+    """Violation and event history keep the name as text, so nothing else changes."""
+    with vehicle_db() as conn:
+        row = conn.execute("SELECT name FROM locations WHERE id = ?", (location_id,)).fetchone()
+        with conn:
+            conn.execute("DELETE FROM locations WHERE id = ?", (location_id,))
+    if row:
+        flash(f"Deleted location {row['name']}. Gate operators can no longer sign in to it.")
+    return redirect(url_for("manage_locations"))
 
 
 # =================================================
@@ -301,7 +341,7 @@ def edit_prohibited_time(segment):
                     WHERE LOWER(name) = LOWER(?)
                 """, (start or None, end or None, segment))
         flash(f"Prohibited time for {segment} saved.")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("manage_locations"))
 
     # GET no longer writes to the DB.
     with vehicle_db() as conn:
@@ -346,7 +386,7 @@ def add_location():
             return render_template("add_location.html", error=error, form=request.form), 400
 
         flash(f"Added location {name}.")
-        return redirect(url_for("admin_dashboard"))
+        return redirect(url_for("manage_locations"))
 
     return render_template("add_location.html", form={})
 
@@ -363,18 +403,12 @@ def run_ai():
 # =================================================
 # LIVE VIDEO
 # =================================================
-def _known_location(name):
-    with vehicle_db() as conn:
-        return conn.execute("SELECT 1 FROM locations WHERE LOWER(name) = LOWER(?)",
-                            ((name or "").strip(),)).fetchone() is not None
-
-
 @app.route("/video_feed/<gate>")
 @gate_api_required
 def video_feed(gate):
     # Every distinct gate name starts a detection worker thread that never exits,
     # so only real locations may open a stream.
-    if not _known_location(gate):
+    if not known_location(gate):
         abort(404, description=f"Unknown gate '{gate}'.")
     return Response(
         generate_frames(gate),
@@ -387,7 +421,7 @@ def video_feed(gate):
 @gate_api_required
 def camera_status(gate="default"):
     """Capture health, so a stalled camera is diagnosable during a demo."""
-    return jsonify(capture.get_stream(gate.strip().lower()).stats())
+    return jsonify(camera.live_status(gate)["camera"])
 
 
 # =================================================

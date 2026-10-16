@@ -84,6 +84,14 @@ def current_gate():
     return session.get("gate")
 
 
+def operator_name():
+    """Who is acting, for the gate audit trail: the admin's username or the gate."""
+    if is_admin():
+        return f"admin:{session.get('admin_username') or 'admin'}"
+    gate = current_gate()
+    return f"gate:{gate}" if gate else None
+
+
 def login_admin(username):
     # clear() first: a pre-login session id must not survive login (fixation).
     session.clear()

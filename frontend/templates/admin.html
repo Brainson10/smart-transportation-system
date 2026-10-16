@@ -21,6 +21,10 @@
     <a href="{{ url_for('violation.view_violations') }}" class="btn-outline">Violations</a>
     <a href="{{ url_for('camera_management.manage_cameras') }}" class="btn-outline">Cameras</a>
     <a href="{{ url_for('manage_roads') }}" class="btn-outline">Roads</a>
+    <a href="{{ url_for('admin.account') }}" class="btn-outline">Account</a>
+    <a href="{{ url_for('manage_locations') }}" class="btn-outline">Locations</a>
+    <a href="{{ url_for('events.gate_activity') }}" class="btn-outline">Gate Activity</a>
+    <a href="{{ url_for('system.system') }}" class="btn-outline">System</a>
     <form method="POST" action="{{ url_for('run_ai') }}" class="inline-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="run-ai-btn">Run AI Risk Prediction</button>
@@ -41,6 +45,18 @@
   <div class="stat-card">Total Cameras<br><b>{{ total_cameras }}</b></div>
   <div class="stat-card">Cameras Online<br><b>{{ online_cameras }} / {{ total_cameras }}</b></div>
   <div class="stat-card">High-Risk Roads<br><b>{{ alerts }}</b></div>
+</section>
+
+<section class="admin-section">
+  <h2 class="section-title">Today at the gates</h2>
+  <div class="stats">
+    <div class="stat-card">Decisions<br><b>{{ stats.today.total }}</b></div>
+    <div class="stat-card">Allowed<br><b>{{ stats.today.allowed }}</b></div>
+    <div class="stat-card">Denied<br><b>{{ stats.today.denied }}</b></div>
+    <div class="stat-card">Manual checks<br><b>{{ stats.today.manual }}</b></div>
+    <div class="stat-card">Violations<br><b>{{ stats.today.violations }}</b></div>
+  </div>
+  <a href="{{ url_for('events.gate_activity') }}" class="view-btn">Review all gate activity →</a>
 </section>
 
 <!-- ================= TOP HIGH RISK ROADS ================= -->
@@ -120,16 +136,16 @@
   {% if locations and locations|length > 0 %}
     <div class="location-grid">
       {% for loc in locations %}
-        <div class="location-card {% if loc[1] > 0 %}danger{% endif %}">
-          <h3>{{ loc[0] }}</h3>
+        <div class="location-card {% if loc.violations > 0 %}danger{% endif %}">
+          <h3>{{ loc.name }}</h3>
 
           <p class="violation-count">
-            Violations: <strong>{{ loc[1] }}</strong>
+            Violations: <strong>{{ loc.violations }}</strong>
           </p>
 
-          {% if loc[2] and loc[3] %}
+          {% if loc.start and loc.end %}
             <p class="prohibited">
-              Prohibited Time: {{ loc[2] }} – {{ loc[3] }}
+              Prohibited Time: {{ loc.start }} – {{ loc.end }}
             </p>
           {% else %}
             <p class="prohibited muted">
@@ -137,7 +153,7 @@
             </p>
           {% endif %}
           <p style="margin-top:8px;font-size:13px;">
-            <a href="{{ url_for('edit_prohibited_time', segment=loc[0]) }}">Edit prohibited time</a>
+            <a href="{{ url_for('edit_prohibited_time', segment=loc.name) }}">Edit prohibited time</a>
           </p>
         </div>
       {% endfor %}

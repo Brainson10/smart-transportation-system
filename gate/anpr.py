@@ -31,6 +31,9 @@ log = logging.getLogger(__name__)
 
 _model = None
 _model_lock = threading.Lock()
+# Ultralytics models are not safe to call from several threads at once, and
+# every open gate runs its own detection worker against this one model.
+_infer_lock = threading.Lock()
 
 
 @dataclass
@@ -44,6 +47,8 @@ class PlateDetection:
     substitutions: int = 0
     confidence: int = 0       # fused 0..100
     variant: str = ""
+    sharpness: float = 0.0    # Laplacian variance at OCR height
+    blurry: bool = False      # skipped: too blurred to read honestly
     crop: np.ndarray = field(default=None, repr=False)
 
     @property
@@ -80,17 +85,65 @@ def _get_model():
         return _model
 
 
+def roi_pixels(frame_shape, roi=None):
+    """config.ROI (fractions) -> (x1, y1, x2, y2) pixels, or None for the whole frame."""
+    roi = config.ROI if roi is None else roi
+    if not roi:
+        return None
+    height, width = frame_shape[:2]
+    x1, y1, x2, y2 = roi
+    return int(x1 * width), int(y1 * height), int(x2 * width), int(y2 * height)
+
+
+def in_roi(bbox, roi_px):
+    if roi_px is None:
+        return True
+    x, y, w, h = bbox
+    cx, cy = x + w / 2, y + h / 2
+    return roi_px[0] <= cx <= roi_px[2] and roi_px[1] <= cy <= roi_px[3]
+
+
+def sharpness(crop):
+    """
+    How readable the crop's edges are, 0 (mush) .. ~300 (crisp print).
+
+    The weaker of the horizontal and vertical second-derivative energies,
+    divided by the crop's own contrast, measured at OCR height:
+      * per-axis, because gate blur is mostly horizontal motion blur, which
+        plain Laplacian variance barely notices (vertical edges survive);
+      * contrast-normalised, so a dim or faded plate is not mistaken for a
+        blurred one;
+      * at OCR height, so near (large) and far (small) plates compare.
+    On this project's plate crops OCR fails below roughly 6-9.
+    """
+    if crop is None or crop.size == 0:
+        return 0.0
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+    scale = config.OCR_TARGET_HEIGHT / max(1, gray.shape[0])
+    gray = cv2.resize(gray, None, fx=scale, fy=scale,
+                      interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
+    gray = gray.astype(np.float64)
+    contrast = gray.var()
+    if contrast < 1.0:
+        return 0.0                          # a flat patch has nothing to read
+    dxx = cv2.Sobel(gray, cv2.CV_64F, 2, 0, ksize=3).var()
+    dyy = cv2.Sobel(gray, cv2.CV_64F, 0, 2, ksize=3).var()
+    return 100.0 * min(dxx, dyy) / contrast
+
+
 def detect_plates(frame):
     """All plate boxes, padded and size-filtered, best detection confidence first."""
     if frame is None or frame.size == 0:
         return []
 
     model = _get_model()
-    results = model(frame, conf=config.YOLO_CONF, iou=config.YOLO_IOU,
-                    imgsz=config.YOLO_IMGSZ, max_det=config.YOLO_MAX_DET,
-                    device=config.YOLO_DEVICE, verbose=False)
+    with _infer_lock:
+        results = model(frame, conf=config.YOLO_CONF, iou=config.YOLO_IOU,
+                        imgsz=config.YOLO_IMGSZ, max_det=config.YOLO_MAX_DET,
+                        device=config.YOLO_DEVICE, verbose=False)
 
     height, width = frame.shape[:2]
+    roi_px = roi_pixels(frame.shape)
     boxes = []
     for result in results:
         if result.boxes is None:
@@ -112,6 +165,8 @@ def detect_plates(frame):
                 continue
             if w * h < config.MIN_PLATE_AREA or w < config.MIN_PLATE_WIDTH:
                 continue
+            if not in_roi((x1, y1, w, h), roi_px):
+                continue
             boxes.append(((x1, y1, w, h), det_conf))
 
     boxes.sort(key=lambda item: item[1], reverse=True)
@@ -121,6 +176,13 @@ def detect_plates(frame):
 def read_plate(crop, det_conf, bbox):
     """OCR one plate crop across every preprocessing variant; keep the best read."""
     detection = PlateDetection(bbox=bbox, det_conf=det_conf, crop=crop)
+    detection.sharpness = sharpness(crop)
+    if detection.sharpness < config.MIN_SHARPNESS:
+        # Motion blur: skip OCR rather than vote on confident-looking garbage.
+        # The next frame (DETECT_INTERVAL later) is usually sharp.
+        detection.blurry = True
+        return detection
+
     engine = ocr.get_engine()
 
     best_score = -1.0
@@ -205,6 +267,7 @@ def run_anpr(frame):
         "det_conf": round(best.det_conf, 3) if best else 0.0,
         "ocr_conf": round(best.ocr_conf, 1) if best else 0.0,
         "raw_text": best.raw_text if best else "",
+        "sharpness": round(best.sharpness, 1) if best else 0.0,
         "detections": detections,
     }
 
@@ -212,35 +275,60 @@ def run_anpr(frame):
 # =================================================
 # OVERLAY
 # =================================================
-GREEN = (0, 200, 0)
+GREEN = (60, 190, 60)
 AMBER = (0, 170, 255)
+GREY = (150, 150, 150)
 WHITE = (255, 255, 255)
+CYAN = (230, 200, 40)
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
-def annotate(frame, detections, extra_lines=()):
-    """Draw boxes, plate text and confidence so the demo is visibly working."""
+def _label(canvas, text, x, y, colour):
+    (tw, th), _ = cv2.getTextSize(text, FONT, 0.6, 2)
+    top = max(0, y - th - 8)
+    cv2.rectangle(canvas, (x, top), (x + tw + 8, top + th + 8), colour, -1)
+    cv2.putText(canvas, text, (x + 4, top + th + 2), FONT, 0.6, WHITE, 2)
+
+
+def annotate(frame, detections, extra_lines=(), status=None, roi=True):
+    """
+    Draw boxes, plate text and confidence so the demo is visibly working.
+
+    `status` is one short line drawn on a translucent bar along the bottom
+    (gate, time, lock progress); `extra_lines` is the optional debug block.
+    """
     if frame is None:
         return frame
     canvas = frame
 
+    roi_px = roi_pixels(canvas.shape) if roi else None
+    if roi_px:
+        cv2.rectangle(canvas, roi_px[:2], roi_px[2:], CYAN, 1)
+        cv2.putText(canvas, "detection zone", (roi_px[0] + 4, roi_px[1] + 16),
+                    FONT, 0.45, CYAN, 1)
+
     for detection in detections or []:
         x, y, w, h = detection.bbox
-        colour = GREEN if detection.readable else AMBER
+        if detection.readable:
+            colour, text = GREEN, f"{detection.plate}  {detection.confidence}%"
+        elif detection.blurry:
+            colour, text = GREY, "blurred - hold steady"
+        else:
+            colour, text = AMBER, f"? {detection.raw_text or 'reading...'}"
         cv2.rectangle(canvas, (x, y), (x + w, y + h), colour, 2)
-
-        label = (f"{detection.plate} {detection.confidence}%"
-                 if detection.readable
-                 else f"? {detection.raw_text or 'unreadable'}")
-        (tw, th), _ = cv2.getTextSize(label, FONT, 0.6, 2)
-        top = max(0, y - th - 8)
-        cv2.rectangle(canvas, (x, top), (x + tw + 8, top + th + 8), colour, -1)
-        cv2.putText(canvas, label, (x + 4, top + th + 2), FONT, 0.6, WHITE, 2)
+        _label(canvas, text, x, y, colour)
 
     for index, line in enumerate(extra_lines):
         cv2.putText(canvas, str(line), (10, 24 + index * 22),
                     FONT, 0.55, (0, 0, 0), 3)
         cv2.putText(canvas, str(line), (10, 24 + index * 22),
                     FONT, 0.55, (255, 255, 0), 1)
+
+    if status:
+        height, width = canvas.shape[:2]
+        bar = canvas[height - 30:height, 0:width]
+        cv2.addWeighted(bar, 0.35, np.zeros_like(bar), 0.65, 0, dst=bar)
+        cv2.putText(canvas, str(status), (10, height - 10), FONT, 0.55, WHITE, 1,
+                    cv2.LINE_AA)
 
     return canvas

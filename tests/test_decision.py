@@ -75,7 +75,7 @@ def prohibited(monkeypatch):
 
 
 def _decide(plate, confidence=90, gate="hostel gate"):
-    decision.set_paused(False)
+    decision.set_paused(False, gate)
     return decision.decide({"vehicle_number": plate, "confidence": confidence}, gate)
 
 
@@ -88,7 +88,7 @@ def _violations():
 def test_registered_vehicle_allowed(data_env, sent_sms):
     result = _decide("MN01AB1234")
     assert (result["decision"], result["reason"]) == ("ALLOW ENTRY", "Registered vehicle")
-    assert decision.is_paused()          # freezes for the operator
+    assert decision.is_paused("hostel gate")          # freezes for the operator
 
 
 def test_unregistered_vehicle_denied(data_env, sent_sms):
@@ -127,3 +127,129 @@ def test_paused_gate_does_not_decide_again(data_env, sent_sms, prohibited):
     _decide("MN01AB1234")
     decision.decide({"vehicle_number": "MN01AB1234", "confidence": 90}, "hostel gate")
     assert len(_violations()) == 1
+
+
+# ---------------- per-gate state ----------------
+def test_pause_is_per_gate(data_env, sent_sms):
+    """'Next Vehicle' at one gate used to un-pause every gate."""
+    _decide("MN01AB1234", gate="hostel gate")
+    assert decision.is_paused("Hostel Gate")
+    assert not decision.is_paused("library gate")
+    assert decision.get_latest_result("library gate")["decision"] == "WAITING"
+
+
+def test_waiting_update_never_overwrites_a_decision(data_env, sent_sms):
+    _decide("MN01AB1234")
+    assert decision.set_waiting("Plate detected, not readable yet", "hostel gate") is None
+    assert decision.get_latest_result("hostel gate")["decision"] == "ALLOW ENTRY"
+
+
+def test_seq_changes_only_when_content_changes(data_env):
+    first = decision.set_waiting("scanning", "hostel gate")["seq"]
+    assert decision.set_waiting("scanning", "hostel gate")["seq"] == first
+    assert decision.set_waiting("something else", "hostel gate")["seq"] > first
+
+
+# ---------------- event log ----------------
+def _events():
+    with vehicle_db() as conn:
+        return [dict(r) for r in conn.execute("SELECT * FROM gate_events ORDER BY id")]
+
+
+def test_every_decision_is_logged(data_env, sent_sms):
+    _decide("MN01AB1234")
+    _decide("KA09ZZ9999")
+    _decide("MN01AB1234", confidence=40)
+    events = _events()
+    assert [(e["plate"], e["decision"], e["gate"]) for e in events] == [
+        ("MN01AB1234", "ALLOW ENTRY", "Hostel Gate"),
+        ("KA09ZZ9999", "DENY ENTRY", "Hostel Gate"),
+        ("MN01AB1234", "MANUAL CHECK", "Hostel Gate"),
+    ]
+    assert decision.get_latest_result("hostel gate")["event_id"] == events[-1]["id"]
+
+
+def test_violation_links_to_its_event_and_records_sms(data_env, sent_sms, prohibited):
+    result = _decide("MN01AB1234")
+    with vehicle_db() as conn:
+        violation = conn.execute("SELECT event_id, status FROM violations").fetchone()
+    assert violation["event_id"] == result["event_id"] and violation["status"] == "OPEN"
+    assert _events()[0]["sms_sent"] == 1
+
+
+def test_result_carries_vehicle_details_without_phone(data_env, sent_sms):
+    vehicle = _decide("MN01AB1234")["vehicle"]
+    assert vehicle["owner"] == "Demo Student A" and vehicle["role"] == "Student"
+    assert "phone" not in vehicle
+
+
+# ---------------- new rules ----------------
+def test_near_match_goes_to_manual_check_with_suggestion(data_env, sent_sms):
+    result = _decide("MN01AB1284")        # registered: MN01AB1234
+    assert result["decision"] == "MANUAL CHECK"
+    assert result["suggested_plate"] == "MN01AB1234"
+    assert _events()[0]["suggested_plate"] == "MN01AB1234"
+
+
+def test_unrelated_unregistered_plate_is_still_denied(data_env, sent_sms):
+    result = _decide("KA09ZZ9999")
+    assert (result["decision"], result["suggested_plate"]) == ("DENY ENTRY", None)
+
+
+def _set_valid_until(value):
+    with vehicle_db() as conn:
+        with conn:
+            conn.execute("UPDATE vehicles SET valid_until=? WHERE number='MN01AB1234'", (value,))
+
+
+def test_expired_pass_is_denied(data_env, sent_sms):
+    _set_valid_until("2020-01-01")
+    result = _decide("MN01AB1234")
+    assert result["decision"] == "DENY ENTRY" and "Pass expired" in result["reason"]
+
+
+def test_pass_valid_through_its_last_day(data_env, sent_sms):
+    from datetime import date
+    _set_valid_until(date.today().isoformat())
+    assert _decide("MN01AB1234")["decision"] == "ALLOW ENTRY"
+
+
+@pytest.mark.parametrize("valid_until,expired", [
+    (None, False), ("", False), ("2020-01-01", True), ("2999-12-31", False), ("garbage", False),
+])
+def test_pass_expired(valid_until, expired):
+    assert decision.pass_expired(valid_until) is expired
+
+
+# ---------------- operator actions ----------------
+def test_override_settles_the_event(data_env, sent_sms):
+    _decide("MN01AB1234", confidence=40)                 # MANUAL CHECK
+    result = decision.override("hostel gate", "allow", "gate:Hostel Gate")
+    assert result["decision"] == "ALLOW ENTRY" and "Operator allowed" in result["reason"]
+    event = _events()[0]
+    assert (event["final_decision"], event["operator"]) == ("ALLOW ENTRY", "gate:Hostel Gate")
+    assert decision.is_paused("hostel gate")
+
+
+def test_override_without_a_decision_is_refused(data_env):
+    with pytest.raises(ValueError):
+        decision.override("hostel gate", "allow")
+
+
+def test_operator_check_rechecks_a_corrected_plate(data_env, sent_sms):
+    _decide("MN01AB1284")                                # MANUAL + suggestion
+    result = decision.operator_check("hostel gate", "MN01AB1234", "gate:Hostel Gate")
+    assert (result["decision"], result["source"]) == ("ALLOW ENTRY", "operator")
+    events = _events()
+    assert events[0]["final_decision"] == "RECHECKED"
+    assert (events[1]["plate"], events[1]["source"]) == ("MN01AB1234", "operator")
+
+
+def test_operator_check_applies_prohibited_time(data_env, sent_sms, prohibited):
+    result = decision.operator_check("hostel gate", "MN01AB1234")
+    assert result["reason"] == "Prohibited time violation" and len(_violations()) == 1
+
+
+def test_operator_check_rejects_invalid_plates(data_env):
+    with pytest.raises(ValueError):
+        decision.operator_check("hostel gate", "HELLO")
